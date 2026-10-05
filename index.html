@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="de"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2747A8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vokabeln">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Vokabelapp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: phone-first single column, one screen at a time; the flash card is the hero, rating buttons sit within thumb reach */
+:root{
+  --bg:#F3F5FA; --surface:#FFFFFF; --fg:#17203A; --muted:#5A6480; --line:#DCE1EC;
+  --accent:#2747A8; --accent-fg:#FFFFFF; --accent-soft:#E6ECFA;
+  --good:#1E7A4C; --good-soft:#E0F2E8; --mid:#8F5400; --mid-soft:#FBEFD9; --bad:#B3261E; --bad-soft:#FBE3E1;
+  --s0:#DCE1EC; --s1:#A9BCEB; --s2:#5C7BD6; --s3:#1E7A4C;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10141F; --surface:#181E2C; --fg:#E6EAF4; --muted:#9AA4BE; --line:#2A3247;
+  --accent:#8EA8FF; --accent-fg:#10141F; --accent-soft:#1F2A4A;
+  --good:#5FD39A; --good-soft:#163527; --mid:#F0C060; --mid-soft:#3A2E14; --bad:#FF8A80; --bad-soft:#3D1C1A;
+  --s0:#2A3247; --s1:#33467E; --s2:#5C7BD6; --s3:#5FD39A; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#10141F; --surface:#181E2C; --fg:#E6EAF4; --muted:#9AA4BE; --line:#2A3247;
+  --accent:#8EA8FF; --accent-fg:#10141F; --accent-soft:#1F2A4A;
+  --good:#5FD39A; --good-soft:#163527; --mid:#F0C060; --mid-soft:#3A2E14; --bad:#FF8A80; --bad-soft:#3D1C1A;
+  --s0:#2A3247; --s1:#33467E; --s2:#5C7BD6; --s3:#5FD39A; color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-in{max-width:560px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:-.01em}
+.brand span{color:var(--accent)}
+.who{display:flex;align-items:center;gap:8px}
+.chip{background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:14px;padding:4px 10px;border-radius:999px}
+.link{background:none;border:0;color:var(--accent);font-weight:700;font-size:15px;padding:6px 4px}
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+section{display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--f-display);font-size:28px;line-height:1.15;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-size:19px;margin:6px 0 0}
+.sub{color:var(--muted);margin:0}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.btn{border:0;border-radius:12px;min-height:54px;padding:12px 18px;font-weight:700;font-size:17px;width:100%}
+.btn.primary{background:var(--accent);color:var(--accent-fg)}
+.btn.primary:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:var(--surface);border:1px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1 1 0;min-width:0}
+/* profiles */
+.profiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.prof{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 12px;display:flex;flex-direction:column;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.avatar{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-size:28px;background:var(--accent-soft);color:var(--accent)}
+.prof .hint{font-weight:400;font-size:13px;color:var(--muted)}
+/* pin */
+.pin-dots{display:flex;justify-content:center;gap:16px;padding:8px 0}
+.pin-dots i{width:18px;height:18px;border-radius:50%;border:2px solid var(--muted)}
+.pin-dots i.on{background:var(--fg);border-color:var(--fg)}
+.pin-dots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:320px;margin:0 auto;width:100%}
+.keypad button{min-height:62px;border-radius:14px;border:1px solid var(--line);background:var(--surface);font-size:24px;font-weight:700}
+.keypad button.fn{font-size:15px;color:var(--muted)}
+.msg{min-height:22px;text-align:center;color:var(--bad);font-weight:700;margin:0}
+.center{text-align:center}
+/* setup */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;text-align:left;min-height:54px;font-weight:700}
+.opt small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips .opt{padding:8px 14px;min-height:44px}
+.lessons{display:flex;flex-direction:column;gap:8px}
+.lesson{display:flex;flex-direction:column;gap:8px}
+.lesson-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.lesson-top .n{font-weight:400;font-size:13px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--s0)}
+.bar b{display:block;height:100%}
+.empty{padding:18px;color:var(--muted)}
+/* card */
+.progress{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.progress .track{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.progress .fill{height:100%;background:var(--accent);transition:width .25s}
+.card{padding:22px 20px;display:flex;flex-direction:column;gap:14px;min-height:300px}
+.card-meta{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stage{display:flex;gap:5px} .stage i{width:10px;height:10px;border-radius:50%;background:var(--line)} .stage i.on{background:var(--good)}
+.word{font-family:var(--f-display);font-size:34px;line-height:1.15;font-weight:700;overflow-wrap:anywhere;text-wrap:balance}
+.word.ans{font-size:28px;color:var(--accent)}
+.say{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
+.speak{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
+.speak svg{width:20px;height:20px;fill:none;stroke:var(--fg);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.divider{border-top:1px dashed var(--line)}
+.hint{color:var(--muted);font-size:15px;margin:0;overflow-wrap:anywhere}
+.rate{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rate .btn{font-size:15px;padding:10px 6px;min-height:64px;line-height:1.2}
+.r-g{background:var(--good-soft);color:var(--good)} .r-f{background:var(--mid-soft);color:var(--mid)} .r-n{background:var(--bad-soft);color:var(--bad)}
+/* done */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{padding:14px 10px;text-align:center}
+.stat b{display:block;font-family:var(--f-display);font-size:30px;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+/* parent */
+.fold{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;min-width:0;min-height:40px}
+.fold .caret{display:inline-block;width:1em;color:var(--muted,#888);font-size:14px}
+.lesson-group.fold{display:flex;width:100%;box-sizing:border-box}
+.kid-body,.book-body,.lesson-body{display:flex;flex-direction:column;gap:10px}
+.kid-body[hidden],.book-body[hidden],.lesson-body[hidden]{display:none}
+.kid{padding:16px;display:flex;flex-direction:column;gap:14px}
+.kid-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.kid-head h2{margin:0}
+.book{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.book-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.book-head b{min-width:0}
+.mini{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;font-size:14px;font-weight:700}
+.mini.warn{border-color:var(--bad);color:var(--bad)}
+.lrow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
+select.mini{appearance:auto;background:var(--surface);color:var(--fg)}
+.goals{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.goals .opt{text-align:center;font-size:22px;font-family:var(--f-display)}
+.goals .opt small{font-family:var(--f-body)}
+.switch{position:relative;width:48px;height:28px;flex:none}
+.switch input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.switch span{position:absolute;inset:0;border-radius:14px;background:var(--line);transition:background .15s;pointer-events:none}
+.switch span::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--surface);transition:transform .15s}
+.switch input:checked+span{background:var(--good)}
+.switch input:checked+span::after{transform:translateX(20px)}
+.switch input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;max-width:calc(100% - 32px);z-index:10}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* v4 additions */
+.back{align-self:flex-start;background:none;border:0;color:var(--accent);font-weight:700;padding:4px 0;font-size:15px}
+.books{display:flex;flex-direction:column;gap:10px}
+.book-btn{display:flex;flex-direction:column;gap:10px;padding:16px}
+.book-btn .t{font-family:var(--f-display);font-size:19px}
+.lrow-wrap{display:flex;flex-direction:column;gap:10px}
+.expand{background:none;border:0;padding:0;text-align:left;width:100%;display:block}
+.expand .caret{display:inline-block;transition:transform .15s;color:var(--muted);margin-left:4px}
+.expand[aria-expanded="true"] .caret{transform:rotate(90deg)}
+.detail{background:var(--bg);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:12px}
+.detail-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.vt{width:100%;border-collapse:collapse;font-size:14px}
+table.vt th{text-align:left;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.vt td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.p0{background:var(--line);color:var(--muted)} .p1{background:var(--accent-soft);color:var(--accent)} .p2{background:var(--good-soft);color:var(--good)}
+.pg{background:var(--good-soft);color:var(--good)} .pf{background:var(--mid-soft);color:var(--mid)} .pn{background:var(--bad-soft);color:var(--bad)}
+.sessions{display:flex;flex-direction:column;gap:8px}
+.sess{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.sess:last-child{border-bottom:0}
+.sess .when{font-weight:700;font-variant-numeric:tabular-nums}
+.sess .meta{color:var(--muted);font-variant-numeric:tabular-nums}
+.sess .res{display:flex;gap:4px}
+.addkid{padding:16px;display:flex;flex-direction:column;gap:10px}
+.addkid form{display:flex;gap:8px;flex-wrap:wrap}
+.addkid input{flex:1 1 180px;min-width:0;min-height:48px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:inherit;background:var(--surface);color:var(--fg)}
+.addkid .btn{width:auto;flex:none;min-height:48px}
+.kid-actions{display:flex;gap:6px;flex-wrap:wrap}
+.inactive{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.progress .link{padding:6px 2px}
+
+.opt.indent,.lrow-wrap.indent{margin-left:20px}
+.lesson-group{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-top:4px}
+.expand small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.net{font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--mid-soft);color:var(--mid);white-space:nowrap}
+.net.sync{background:var(--accent-soft);color:var(--accent)}
+.vform{display:flex;flex-direction:column;gap:8px}
+.vform input[type=text],.vform input[type=email],.vform input[type=password]{min-height:48px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:inherit;background:var(--surface);color:var(--fg);width:100%}
+.hbox{display:flex;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="top-in">
+  <div class="brand">Vokabel<span>app</span></div>
+  <div class="hbox"><span class="net" id="net" hidden></span><div class="who" id="who"></div></div>
+</div></header>
+
+<main class="wrap">
+  <section id="s-loading"><p class="sub">Vokabeln werden geladen …</p></section>
+
+  <section id="s-error" hidden>
+    <h1>Keine Verbindung zur Datenbank</h1>
+    <p class="sub" id="err-text">Bitte die App bei claude.ai angemeldet öffnen und Internet prüfen.</p>
+    <button class="btn ghost" id="btn-retry">Erneut versuchen</button>
+  </section>
+
+  <section id="s-login" hidden>
+    <div><h1>Anmelden</h1><p class="sub">Einmal pro Gerät mit dem Familien-Konto anmelden. Dafür wird Internet gebraucht.</p></div>
+    <form id="form-login" class="vform">
+      <input id="login-mail" type="email" autocomplete="username" placeholder="E-Mail" required aria-label="E-Mail">
+      <input id="login-pw" type="password" autocomplete="current-password" placeholder="Passwort" required aria-label="Passwort">
+      <p class="msg" id="login-msg"></p>
+      <button class="btn primary" type="submit">Anmelden</button>
+    </form>
+  </section>
+
+  <section id="s-profiles" hidden>
+    <div><h1>Wer lernt heute?</h1><p class="sub">Tippe auf deinen Namen.</p></div>
+    <div class="profiles" id="profile-list"></div>
+    <button class="link" id="btn-parent" style="align-self:center">Eltern-Bereich</button>
+  </section>
+
+  <section id="s-pin" hidden>
+    <div class="center"><h1 id="pin-title">PIN</h1><p class="sub" id="pin-sub"></p></div>
+    <div class="pin-dots" id="pin-dots"><i></i><i></i><i></i><i></i></div>
+    <p class="msg" id="pin-msg"></p>
+    <div class="keypad" id="keypad"></div>
+  </section>
+
+  <section id="s-books" hidden>
+    <div><h1 id="books-hello">Hallo!</h1><p class="sub">Welches Buch möchtest du lernen?</p></div>
+    <div class="books" id="book-list"></div>
+  </section>
+
+  <section id="s-setup" hidden>
+    <button class="back" id="btn-books">← Alle Bücher</button>
+    <div><h1 id="setup-title">Buch</h1><p class="sub" id="setup-sub"></p></div>
+    <div><div class="label">Abfragerichtung</div>
+      <div class="seg" style="margin-top:8px">
+        <button class="opt" id="dir-de" aria-pressed="true">Deutsch → <span class="lname">Fremdsprache</span><small>Deutsch sehen, übersetzen</small></button>
+        <button class="opt" id="dir-fs" aria-pressed="false"><span class="lname">Fremdsprache</span> → Deutsch<small>Fremdwort sehen, übersetzen</small></button>
+      </div></div>
+    <div><div class="label">Lektion</div><div class="lessons" id="lesson-list" style="margin-top:8px"></div></div>
+    <button class="btn primary" id="btn-start">Los geht's</button>
+  </section>
+
+  <section id="s-goal" hidden>
+    <div><h1>Wie oft willst du jede Vokabel wissen?</h1><p class="sub">Erst wenn du eine Vokabel so oft gewusst hast, gilt sie als gelernt. Später können nur deine Eltern das ändern.</p></div>
+    <div class="panel" style="padding:12px 16px"><div class="label">Gilt für</div><div id="goal-lessons" style="margin-top:4px;font-weight:700"></div></div>
+    <div class="goals" id="goal-opts"></div>
+    <button class="btn primary" id="btn-goal">Festlegen und loslegen</button>
+  </section>
+
+  <section id="s-card" hidden>
+    <div class="progress"><button class="link" id="btn-undo" hidden>← Zurück</button><span id="prog-text">1 / 1</span><div class="track"><div class="fill" id="prog-fill"></div></div><button class="link" id="btn-stop">Beenden</button></div>
+    <div class="panel card">
+      <div class="card-meta"><span class="label" id="q-label">Deutsch</span><span class="stage" id="q-stage" title="Lernstufe"></span></div>
+      <div class="say"><div class="word" id="q-word"></div><button class="speak" id="q-speak" hidden aria-label="Vorlesen"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></button></div>
+      <div id="a-box" hidden style="display:flex;flex-direction:column;gap:10px">
+        <div class="divider"></div>
+        <span class="label" id="a-label">Englisch</span>
+        <div class="say"><div class="word ans" id="a-word"></div><button class="speak" id="a-speak" hidden aria-label="Vorlesen"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></button></div>
+        <p class="hint" id="a-hint"></p>
+      </div>
+    </div>
+    <button class="btn primary" id="btn-reveal">Lösung zeigen</button>
+    <div class="rate" id="rate" hidden>
+      <button class="btn r-g" data-r="g">Gewusst</button>
+      <button class="btn r-f" data-r="f">Fast gewusst</button>
+      <button class="btn r-n" data-r="n">Nicht gewusst</button>
+    </div>
+  </section>
+
+  <section id="s-done" hidden>
+    <div><h1 id="done-title">Runde geschafft</h1><p class="sub" id="done-sub"></p></div>
+    <div class="stats">
+      <div class="panel stat"><b id="st-g">0</b><span>gewusst</span></div>
+      <div class="panel stat"><b id="st-f">0</b><span>fast gewusst</span></div>
+      <div class="panel stat"><b id="st-n">0</b><span>nicht gewusst</span></div>
+    </div>
+    <button class="btn primary" id="btn-again">Nochmal</button>
+    <button class="btn ghost" id="btn-fix">Letzte Antwort korrigieren</button>
+    <button class="btn ghost" id="btn-other">Andere Lektion wählen</button>
+  </section>
+
+  <section id="s-parent" hidden>
+    <div><h1>Eltern-Bereich</h1><p class="sub">Lektionen freischalten, Lernstand und Übungen ansehen. Tippe auf eine Lektion für Details.</p></div>
+    <div class="legend"><span><i style="background:var(--s0)"></i>neu</span><span><i style="background:var(--s2)"></i>in Arbeit</span><span><i style="background:var(--s3)"></i>gelernt</span></div>
+    <div id="kid-list" style="display:flex;flex-direction:column;gap:14px"></div>
+    <div class="panel addkid">
+      <h2 style="margin:0">Kind hinzufügen</h2>
+      <form id="form-kid"><input id="kid-name" type="text" maxlength="30" placeholder="Vorname" autocomplete="off" aria-label="Vorname des Kindes"><button class="btn primary" type="submit">Anlegen</button></form>
+      <p class="sub" style="font-size:14px">Die PIN legt das Kind beim ersten Anmelden selbst fest.</p>
+      <div id="inactive-list"></div>
+    </div>
+    <div class="panel addkid">
+      <h2 style="margin:0">Daten</h2>
+      <p class="sub" style="font-size:14px">Neue Bücher und Vokabeln kommen als JSON-Datei hinein. Die JSON-Sicherung enthält alles, auch die PINs.</p>
+      <button class="btn ghost" id="btn-import">JSON importieren</button>
+      <input type="file" id="file-import" accept=".json,application/json" hidden>
+      <div id="import-preview"></div>
+      <button class="btn ghost" id="btn-export-json">Alles als JSON sichern</button>
+      <button class="btn ghost" id="btn-export">Lernstand als CSV (zum Ansehen)</button>
+      <button class="btn ghost" id="btn-signout">Familien-Konto abmelden</button>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+/* ===== Datenzugriff (gekapselt, für späteren Umstieg austauschbar) ===== */
+/* Firestore mit lokalem Speicher (IndexedDB): Lesen geht offline aus der lokalen Kopie, Schreiben wird vorgemerkt und später abgeglichen. */
+let pending = 0;
+function netState(){
+  const el = $("net"), off = !navigator.onLine;
+  el.hidden = !(off || pending > 0);
+  el.classList.toggle("sync", !off);
+  el.textContent = off ? (pending ? "Offline · " + pending + " offen" : "Offline") : "Abgleich …";
+}
+addEventListener("online", netState);
+addEventListener("offline", netState);
+/* Schreibbefehle melden sofort Erfolg, sobald lokal gespeichert ist. Die Bestätigung der Cloud kommt später (offline erst bei Verbindung). */
+function write(p){
+  pending++; netState();
+  p.then(() => { pending--; netState(); }, e => {
+    pending--; netState(); console.error(e);
+    toast("Eine Änderung konnte nicht in die Cloud übertragen werden (" + (e.code || "Fehler") + ").");
+  });
+  return Promise.resolve();
+}
+const Store = {
+  db: null,
+  async snap(q){
+    if (!navigator.onLine) return q.get({ source: "cache" });
+    try { return await Promise.race([q.get(), new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000))]); }
+    catch (e) {
+      if (e && (e.code === "permission-denied" || e.code === "unauthenticated")) throw e;
+      return q.get({ source: "cache" });
+    }
+  },
+  async all(col){ return (await this.snap(this.db.collection(col))).docs.map(d => d.data()); },
+  async where(col, f, op, v){ return (await this.snap(this.db.collection(col).where(f, op, v))).docs.map(d => d.data()); },
+  async vocabFor(lessonIds){
+    const out = [];
+    for (let i = 0; i < lessonIds.length; i += 30) out.push(...await this.where("vokabeln", "lektion_id", "in", lessonIds.slice(i, i + 30)));
+    return out;
+  },
+  progressFor(pid){ return this.where("fortschritt", "profil_id", "==", pid); },
+  assignmentsFor(pid){ return this.where("zuordnungen", "profil_id", "==", pid); },
+  async sessionsFor(pid, unit){ return (await this.where("uebungen", "lektion_id", "==", unit.lektion_id)).filter(u => u.profil_id === pid && (u.unterlektion_id || null) === unit.unterlektion_id); },
+  set(col, id, d){ return write(this.db.collection(col).doc(id).set(d)); },
+  del(col, id){ return write(this.db.collection(col).doc(id).delete()); },
+  update(col, id, d){ return write(this.db.collection(col).doc(id).update(d)); },
+  saveProgress(d){ return this.set("fortschritt", d.fortschritt_id, d); },
+  deleteProgress(id){ return this.del("fortschritt", id); },
+  saveAssignment(d){ return this.set("zuordnungen", d.zuordnung_id, d); },
+  bookAssignmentsFor(pid){ return this.where("buch_zuordnungen", "profil_id", "==", pid); },
+  assignBook(d){ return this.set("buch_zuordnungen", d.buch_zuordnung_id, d); },
+  unassignBook(id){ return this.del("buch_zuordnungen", id); },
+  saveSession(d){ return this.set("uebungen", d.uebung_id, d); },
+  deleteSession(id){ return this.del("uebungen", id); },
+  addProfile(d){ return this.set("profile", d.profil_id, d); },
+  setProfileActive(pid, on){ return this.update("profile", pid, { aktiv: on }); },
+  setChildPin(pid, hash){ return this.update("profile", pid, { pin_hash: hash }); },
+  setParentPin(hash){ return this.set("einstellungen", "app", { einstellung_id: "app", eltern_pin_hash: hash, geaendert_am: now() }); }
+};
+
+/* ===== Hilfen ===== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const now = () => new Date().toISOString();
+const SECTIONS = ["s-loading","s-error","s-login","s-profiles","s-pin","s-books","s-setup","s-goal","s-card","s-done","s-parent"];
+function show(id){ SECTIONS.forEach(s => $(s).hidden = s !== id); window.scrollTo(0, 0); }
+let toastT;
+function toast(t){ const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 3200); }
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function djb2Hash(salt, pin){
+  let h = 5381; for (const c of "vokabelapp:" + salt + ":" + pin) h = ((h << 5) + h + c.charCodeAt(0)) >>> 0;
+  return "djb2-" + h.toString(16);
+}
+async function hashPin(salt, pin){
+  const txt = "vokabelapp:" + salt + ":" + pin;
+  try {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  } catch { return djb2Hash(salt, pin); }
+}
+const pref = { get(k, d){ try { return localStorage.getItem("va-" + k) ?? d; } catch { return d; } }, set(k, v){ try { localStorage.setItem("va-" + k, v); } catch {} } };
+const fmtDate = iso => { try { return new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return iso; } };
+const fmtDay = iso => { try { return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }); } catch { return ""; } };
+const fmtDur = s => s < 60 ? s + " Sek" : Math.round(s / 60) + " Min";
+const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
+const DEFAULT_ZIEL = 3;
+function stageBar(c){ const t = c.total || 1; return `<div class="bar">${["s0","s2","s3"].map((k, i) => `<b style="width:${c.n[i] / t * 100}%;background:var(--${k})"></b>`).join("")}</div>`; }
+/* n[0] = neu, n[1] = in Arbeit, n[2] = gelernt (Stufe >= Ziel der Lektion) */
+function countFor(vocab, prog, zielOf){
+  const c = { total: vocab.length, n: [0,0,0] };
+  vocab.forEach(v => { const s = prog?.get(v.vokabel_id)?.stufe ?? 0; c.n[s >= zielOf(v.lektion_id) ? 2 : s > 0 ? 1 : 0]++; });
+  return c;
+}
+function canSpeak(lang){ return !!lang && lang.sprache_id !== "la"; }
+let VOICES = [];
+function loadVoices(){ try { VOICES = speechSynthesis.getVoices() || []; } catch { VOICES = []; } }
+try { loadVoices(); speechSynthesis.addEventListener("voiceschanged", loadVoices); } catch {}
+function pickVoice(code){
+  const c = (code || "").toLowerCase().replace("_", "-"), base = c.split("-")[0];
+  return VOICES.find(v => v.lang.toLowerCase().replace("_", "-") === c) || VOICES.find(v => v.lang.toLowerCase().startsWith(base)) || null;
+}
+function speak(text, lang){
+  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") return toast("Vorlesen geht hier nicht. Bitte die App im Handy-Browser öffnen.");
+  try {
+    const synth = window.speechSynthesis;
+    loadVoices();
+    if (synth.speaking || synth.pending) synth.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/\(.*?\)/g, "").trim());
+    u.lang = lang.sprachcode || "en-GB"; u.rate = .9; u.volume = 1;
+    const v = pickVoice(u.lang); if (v) u.voice = v;
+    u.onerror = e => { if (e.error && e.error !== "canceled" && e.error !== "interrupted") toast("Vorlesen fehlgeschlagen (" + e.error + "). Sprachausgabe in den Handy-Einstellungen prüfen."); };
+    setTimeout(() => { try { synth.resume(); synth.speak(u); } catch { toast("Vorlesen fehlgeschlagen"); } }, synth.speaking ? 150 : 0);
+  } catch { toast("Vorlesen fehlgeschlagen"); }
+}
+function slug(name){
+  return name.toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "kind";
+}
+
+/* ===== Stammdaten und Lerneinheiten ===== */
+/* Lerneinheit = Unterlektion, wenn die Lektion welche hat, sonst die Lektion selbst. key = unterlektion_id || lektion_id */
+const B = { sprachen: new Map(), buecher: new Map(), lektionen: new Map(), unter: new Map(), units: new Map(), profile: [], allProfile: [], einst: null };
+async function loadBase(){
+  const [sp, bu, le, ul, pr, ei] = await Promise.all(["sprachen","buecher","lektionen","unterlektionen","profile","einstellungen"].map(c => Store.all(c)));
+  B.sprachen = new Map(sp.map(x => [x.sprache_id, x]));
+  B.buecher = new Map(bu.map(x => [x.buch_id, x]));
+  B.lektionen = new Map(le.map(x => [x.lektion_id, x]));
+  B.unter = new Map(ul.filter(u => B.lektionen.has(u.lektion_id)).map(x => [x.unterlektion_id, x]));
+  B.allProfile = pr.sort((a, b) => a.name.localeCompare(b.name, "de"));
+  B.profile = B.allProfile.filter(p => p.aktiv !== false);
+  B.einst = ei.find(e => e.einstellung_id === "app") || null;
+  B.units = new Map();
+  for (const l of B.lektionen.values()){
+    const subs = subsOf(l.lektion_id);
+    if (!subs.length) B.units.set(l.lektion_id, { key: l.lektion_id, lektion_id: l.lektion_id, unterlektion_id: null, buch_id: l.buch_id, name: l.name, full: l.name });
+    else subs.forEach(u => B.units.set(u.unterlektion_id, { key: u.unterlektion_id, lektion_id: l.lektion_id, unterlektion_id: u.unterlektion_id, buch_id: l.buch_id, name: u.name, full: l.name + " · " + u.name }));
+  }
+}
+const subsOf = lid => [...B.unter.values()].filter(u => u.lektion_id === lid).sort((a, b) => a.reihenfolge - b.reihenfolge);
+const unitKeyOfVocab = v => v.unterlektion_id || v.lektion_id;
+const lessonsOfBook = bid => [...B.lektionen.values()].filter(l => l.buch_id === bid).sort((a, b) => a.reihenfolge - b.reihenfolge);
+/* Einheiten in Buch- und Lektionsreihenfolge */
+function sortUnits(keys){
+  const order = k => { const u = B.units.get(k), l = B.lektionen.get(u.lektion_id), s = u.unterlektion_id ? B.unter.get(u.unterlektion_id).reihenfolge : 0;
+    return [B.buecher.get(u.buch_id)?.titel || "", l.reihenfolge, s]; };
+  return keys.filter(k => B.units.has(k)).sort((a, b) => { const x = order(a), y = order(b); return x[0].localeCompare(y[0], "de") || x[1] - y[1] || x[2] - y[2]; });
+}
+/* Zuordnung einer Einheit; Unterlektion ohne eigenen Eintrag erbt von ihrer Lektion (Regel: Aufteilen übernimmt Freischaltung und Ziel) */
+function zuOf(map, pid, unit){ return map.get(pid + "_" + unit.key) || (unit.unterlektion_id ? map.get(pid + "_" + unit.lektion_id) : undefined); }
+function zuDoc(pid, unit, ex, patch){
+  return { zuordnung_id: pid + "_" + unit.key, profil_id: pid, lektion_id: unit.lektion_id, unterlektion_id: unit.unterlektion_id,
+    aktiv: !!ex?.aktiv, ziel_stufe: ex?.ziel_stufe ?? null, geaendert_am: now(), ...patch };
+}
+/* ===== Kopfzeile ===== */
+function setWho(mode){
+  const w = $("who");
+  if (mode === "child") w.innerHTML = `<span class="chip">${esc(C.profile.name)}</span><button class="link" id="btn-logout">Abmelden</button>`;
+  else if (mode === "parent") w.innerHTML = `<button class="link" id="btn-logout">Fertig</button>`;
+  else w.innerHTML = "";
+  const b = $("btn-logout"); if (b) b.onclick = async () => { if (mode === "child"){ await finishRound(); C.pid = null; } goProfiles(); };
+}
+
+/* ===== Profilwahl ===== */
+function goProfiles(){
+  setWho(null);
+  const list = $("profile-list");
+  list.innerHTML = B.profile.length ? "" : `<div class="panel empty" style="grid-column:1/-1">Noch keine Profile angelegt. Lege im Eltern-Bereich ein Kind an.</div>`;
+  B.profile.forEach(p => {
+    const b = document.createElement("button");
+    b.className = "prof";
+    b.innerHTML = `<span class="avatar">${esc(p.name[0] || "?")}</span>${esc(p.name)}<span class="hint">${p.pin_hash ? "PIN eingeben" : "PIN festlegen"}</span>`;
+    b.onclick = () => childLogin(p);
+    list.appendChild(b);
+  });
+  show("s-profiles");
+}
+
+/* ===== PIN-Eingabe ===== */
+const PIN = { buf: "", first: null, cfg: null, busy: false };
+function pinFlow(cfg){ PIN.cfg = cfg; PIN.buf = ""; PIN.first = null; PIN.busy = false; renderPin(); show("s-pin"); }
+function renderPin(msg = ""){
+  const c = PIN.cfg, setting = !c.hash;
+  $("pin-title").textContent = c.title;
+  $("pin-sub").textContent = setting ? (PIN.first ? "PIN zur Bestätigung noch einmal eingeben" : "Neue 4-stellige PIN festlegen") : "4-stellige PIN eingeben";
+  [...$("pin-dots").children].forEach((d, i) => d.classList.toggle("on", i < PIN.buf.length));
+  $("pin-msg").textContent = msg;
+}
+function pinFail(msg){ const d = $("pin-dots"); d.classList.remove("shake"); void d.offsetWidth; d.classList.add("shake"); PIN.buf = ""; renderPin(msg); }
+async function pinComplete(){
+  const c = PIN.cfg, pin = PIN.buf;
+  try {
+    if (c.hash){
+      if ((await hashPin(c.salt, pin)) === c.hash || (String(c.hash).startsWith("djb2-") && djb2Hash(c.salt, pin) === c.hash)) return c.onOk();
+      return pinFail("Falsche PIN");
+    }
+    if (!PIN.first){ PIN.first = pin; PIN.buf = ""; return renderPin(); }
+    if (PIN.first !== pin){ PIN.first = null; return pinFail("PINs stimmen nicht überein. Bitte neu festlegen."); }
+    const h = await hashPin(c.salt, pin);
+    try { await c.onSet(h); toast("PIN gespeichert"); c.onOk(); }
+    catch { pinFail("PIN konnte nicht gespeichert werden. Internet prüfen."); }
+  } finally { PIN.busy = false; }
+}
+function pinKey(k){
+  if (PIN.busy) return;
+  if (k === "back") { PIN.buf = PIN.buf.slice(0, -1); return renderPin(); }
+  if (k === "cancel") return goProfiles();
+  if (PIN.buf.length >= 4) return;
+  PIN.buf += k; renderPin();
+  if (PIN.buf.length === 4){ PIN.busy = true; setTimeout(pinComplete, 120); }
+}
+(function buildKeypad(){
+  ["1","2","3","4","5","6","7","8","9","cancel","0","back"].forEach(k => {
+    const b = document.createElement("button");
+    b.textContent = k === "cancel" ? "Zurück" : k === "back" ? "Löschen" : k;
+    if (k.length > 1) b.className = "fn";
+    b.onclick = () => pinKey(k);
+    $("keypad").appendChild(b);
+  });
+  document.addEventListener("keydown", e => {
+    if ($("s-pin").hidden) return;
+    if (/^[0-9]$/.test(e.key)) pinKey(e.key);
+    else if (e.key === "Backspace") pinKey("back");
+  });
+})();
+
+/* ===== Kind: Anmeldung und Daten ===== */
+const C = { pid: null, profile: null, units: [], zu: new Map(), vocab: [], prog: new Map(), book: null, lang: null, dir: pref.get("dir", "de-fs"), sel: "all" };
+function childLogin(p){
+  pinFlow({ title: "Hallo " + p.name, hash: p.pin_hash, salt: p.profil_id,
+    onSet: async h => { await Store.setChildPin(p.profil_id, h); p.pin_hash = h; },
+    onOk: () => loadChild(p) });
+}
+async function loadChild(p){
+  show("s-loading");
+  try {
+    await loadBase();
+    C.pid = p.profil_id; C.profile = p; C.book = null; C.sel = "all";
+    const [zl, bz] = await Promise.all([Store.assignmentsFor(p.profil_id), Store.bookAssignmentsFor(p.profil_id)]);
+    const raw = new Map(zl.map(z => [z.zuordnung_id, z]));
+    const myBooks = new Set(bz.map(b => b.buch_id));
+    C.zu = new Map(); C.units = [];
+    for (const u of B.units.values()){ if (!myBooks.has(u.buch_id)) continue; const z = zuOf(raw, p.profil_id, u); if (z){ C.zu.set(u.key, z); if (z.aktiv) C.units.push(u.key); } }
+    const active = new Set(C.units);
+    const lids = [...new Set(C.units.map(k => B.units.get(k).lektion_id))];
+    const [voc, prog] = await Promise.all([Store.vocabFor(lids), Store.progressFor(p.profil_id)]);
+    C.vocab = voc.filter(v => active.has(unitKeyOfVocab(v)));
+    C.prog = new Map(prog.map(x => [x.vokabel_id, x]));
+    setWho("child"); goBooks();
+  } catch (e) { showError(e); }
+}
+const stufe = vid => C.prog.get(vid)?.stufe ?? 0;
+const ziel = key => C.zu.get(key)?.ziel_stufe || DEFAULT_ZIEL;
+const zielOfVocab = v => ziel(unitKeyOfVocab(v));
+const isDone = v => stufe(v.vokabel_id) >= zielOfVocab(v);
+const bookUnits = bid => sortUnits(C.units.filter(k => B.units.get(k).buch_id === bid));
+const vocabOf = keys => { const s = new Set(keys); return C.vocab.filter(v => s.has(unitKeyOfVocab(v))); };
+const countC = keys => { const voc = vocabOf(keys), c = { total: voc.length, n: [0,0,0] };
+  voc.forEach(v => { const s = stufe(v.vokabel_id); c.n[s >= zielOfVocab(v) ? 2 : s > 0 ? 1 : 0]++; }); return c; };
+
+/* ===== Schritt 1: Buch ===== */
+function goBooks(){
+  $("books-hello").textContent = "Hallo " + C.profile.name + "!";
+  const books = [...new Set(C.units.map(k => B.units.get(k).buch_id))].map(id => B.buecher.get(id)).filter(Boolean).sort((a, b) => a.titel.localeCompare(b.titel, "de"));
+  const list = $("book-list"); list.innerHTML = "";
+  if (!books.length){
+    list.innerHTML = `<div class="panel empty">Für dich sind noch keine Lektionen freigeschaltet. Bitte deine Eltern, im Eltern-Bereich Lektionen zu aktivieren.</div>`;
+    return show("s-books");
+  }
+  books.forEach(bk => {
+    const keys = bookUnits(bk.buch_id), c = countC(keys);
+    const nl = new Set(keys.map(k => B.units.get(k).lektion_id)).size;
+    const b = document.createElement("button");
+    b.className = "opt book-btn";
+    b.innerHTML = `<div class="lesson-top"><span class="t">${esc(bk.titel)}<small>${esc(B.sprachen.get(bk.sprache_id)?.name || "")} · ${plural(nl, "Lektion", "Lektionen")}</small></span><span class="n">${c.total - c.n[2]} offen · ${c.n[2]} gelernt</span></div>${stageBar(c)}`;
+    b.onclick = () => { C.book = bk.buch_id; C.sel = "all"; goSetup(); };
+    list.appendChild(b);
+  });
+  show("s-books");
+}
+$("btn-books").onclick = goBooks;
+
+/* ===== Schritt 2: Richtung und Lektion / Unterlektion ===== */
+function selKeys(sel = C.sel){
+  const all = bookUnits(C.book);
+  if (sel.startsWith("l:")) return all.filter(k => B.units.get(k).lektion_id === sel.slice(2));
+  if (sel.startsWith("u:")) return all.includes(sel.slice(2)) ? [sel.slice(2)] : [];
+  return all;
+}
+const zielLabel = key => { const z = C.zu.get(key)?.ziel_stufe; return z ? "Ziel " + z + "×" : "Ziel noch offen"; };
+function goSetup(){
+  const bk = B.buecher.get(C.book);
+  if (!bk) return goBooks();
+  C.lang = B.sprachen.get(bk.sprache_id) || { name: "Fremdsprache", sprache_id: "", sprachcode: "" };
+  $("setup-title").textContent = bk.titel;
+  $("setup-sub").textContent = C.lang.name;
+  document.querySelectorAll(".lname").forEach(s => s.textContent = C.lang.name);
+  $("dir-de").setAttribute("aria-pressed", C.dir === "de-fs");
+  $("dir-fs").setAttribute("aria-pressed", C.dir === "fs-de");
+  const all = bookUnits(C.book);
+  if (C.sel !== "all" && !selKeys().length) C.sel = "all";
+  const selLesson = C.sel.startsWith("l:") ? C.sel.slice(2) : C.sel.startsWith("u:") ? B.units.get(C.sel.slice(2))?.lektion_id : null;
+  const rows = [{ id: "all", name: "Alle aktiven Lektionen", sub: plural(new Set(all.map(k => B.units.get(k).lektion_id)).size, "Lektion", "Lektionen"), keys: all }];
+  const lids = [...new Set(all.map(k => B.units.get(k).lektion_id))];
+  lids.forEach(lid => {
+    const l = B.lektionen.get(lid), keys = all.filter(k => B.units.get(k).lektion_id === lid);
+    if (!subsOf(lid).length) rows.push({ id: "u:" + lid, name: l.name, sub: zielLabel(lid), keys });
+    else {
+      rows.push({ id: "l:" + lid, name: l.name, sub: "ganze Lektion · " + plural(keys.length, "Unterlektion", "Unterlektionen") + (selLesson === lid ? "" : " ›"), keys });
+      if (selLesson === lid) keys.forEach(k => rows.push({ id: "u:" + k, name: B.units.get(k).name, sub: zielLabel(k), keys: [k], indent: true }));
+    }
+  });
+  const list = $("lesson-list"); list.innerHTML = "";
+  let openSel = 0;
+  rows.forEach(r => {
+    const c = countC(r.keys), open = c.total - c.n[2];
+    if (r.id === C.sel) openSel = open;
+    const b = document.createElement("button");
+    b.className = "opt lesson" + (r.indent ? " indent" : ""); b.setAttribute("aria-pressed", r.id === C.sel);
+    b.innerHTML = `<div class="lesson-top"><span>${esc(r.name)}<small>${esc(r.sub)}</small></span><span class="n">${open} offen · ${c.n[2]} gelernt</span></div>${stageBar(c)}`;
+    b.onclick = () => { C.sel = r.id; goSetup(); };
+    list.appendChild(b);
+  });
+  $("btn-start").disabled = openSel === 0;
+  $("btn-start").textContent = openSel ? `Los geht's (${plural(openSel, "Karte", "Karten")})` : "Alles gelernt";
+  show("s-setup");
+}
+$("dir-de").onclick = () => { C.dir = "de-fs"; pref.set("dir", C.dir); goSetup(); };
+$("dir-fs").onclick = () => { C.dir = "fs-de"; pref.set("dir", C.dir); goSetup(); };
+
+/* ===== Lernziel beim ersten Start ===== */
+$("btn-start").onclick = () => { const unset = selKeys().filter(k => !C.zu.get(k)?.ziel_stufe); unset.length ? goGoal(unset) : startRound(); };
+const G = { keys: [], val: DEFAULT_ZIEL };
+function goGoal(keys){ G.keys = keys; G.val = DEFAULT_ZIEL; $("goal-lessons").textContent = keys.map(k => B.units.get(k).full).join(", "); renderGoalOpts(); show("s-goal"); }
+function renderGoalOpts(){
+  $("goal-opts").innerHTML = [1,2,3,4,5].map(n => `<button class="opt" data-z="${n}" aria-pressed="${n === G.val}">${n}×<small>${n === 3 ? "empfohlen" : n === 1 ? "Wdh." : n === 2 ? "schnell" : n === 5 ? "gründlich" : "&nbsp;"}</small></button>`).join("");
+}
+$("goal-opts").addEventListener("click", e => { const z = e.target.closest("[data-z]")?.dataset.z; if (z){ G.val = +z; renderGoalOpts(); } });
+$("btn-goal").onclick = async () => {
+  const btn = $("btn-goal"); btn.disabled = true;
+  try {
+    for (const k of G.keys){ const d = zuDoc(C.pid, B.units.get(k), C.zu.get(k), { ziel_stufe: G.val }); await Store.saveAssignment(d); C.zu.set(k, d); }
+    startRound();
+  } catch { toast("Ziel nicht gespeichert. Internet prüfen."); }
+  finally { btn.disabled = false; }
+};
+
+/* ===== Abfrage ===== */
+const R = { queue: [], i: 0, hist: [], st: { g: 0, f: 0, n: 0, neu: 0 }, per: new Map(), runde: null, beginn: null, saved: new Set(), active: false, keys: [] };
+function startRound(){
+  R.keys = selKeys();
+  R.queue = shuffle(vocabOf(R.keys).filter(v => !isDone(v)));
+  if (!R.queue.length) return goSetup();
+  R.i = 0; R.hist = []; R.st = { g: 0, f: 0, n: 0, neu: 0 }; R.per = new Map(); R.saved = new Set();
+  R.runde = C.pid + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  R.beginn = now(); R.active = true;
+  renderCard(); show("s-card");
+}
+function renderCard(revealed = false){
+  const v = R.queue[R.i], deFirst = C.dir === "de-fs";
+  $("prog-text").textContent = (R.i + 1) + " / " + R.queue.length;
+  $("prog-fill").style.width = (R.i / R.queue.length * 100) + "%";
+  $("btn-undo").hidden = !R.hist.length;
+  $("q-label").textContent = deFirst ? "Deutsch" : C.lang.name;
+  $("a-label").textContent = deFirst ? C.lang.name : "Deutsch";
+  $("q-word").textContent = deFirst ? v.deutsch : v.fremdsprache;
+  $("a-word").textContent = deFirst ? v.fremdsprache : v.deutsch;
+  $("a-hint").textContent = v.hinweis || ""; $("a-hint").hidden = !v.hinweis;
+  const s = stufe(v.vokabel_id), z = zielOfVocab(v);
+  $("q-stage").innerHTML = Array.from({ length: z }, (_, i) => `<i class="${i < s ? "on" : ""}"></i>`).join("");
+  $("q-stage").title = "Gewusst: " + Math.min(s, z) + " von " + z;
+  const sp = canSpeak(C.lang);
+  $("q-speak").hidden = !(sp && !deFirst);
+  $("a-speak").hidden = !(sp && deFirst);
+  $("a-box").hidden = !revealed; $("rate").hidden = !revealed; $("btn-reveal").hidden = revealed;
+}
+$("q-speak").onclick = () => speak(R.queue[R.i].fremdsprache, C.lang);
+$("a-speak").onclick = () => speak(R.queue[R.i].fremdsprache, C.lang);
+$("btn-reveal").onclick = () => { $("a-box").hidden = false; $("rate").hidden = false; $("btn-reveal").hidden = true; };
+$("rate").addEventListener("click", e => { const r = e.target.closest("[data-r]")?.dataset.r; if (r) rate(r); });
+function perUnit(key){ if (!R.per.has(key)) R.per.set(key, { n: 0, g: 0, f: 0, x: 0 }); return R.per.get(key); }
+function rate(kind){
+  const v = R.queue[R.i], vid = v.vokabel_id, key = unitKeyOfVocab(v), prev = C.prog.get(vid), old = prev?.stufe ?? 0, z = ziel(key);
+  const s = kind === "g" ? Math.min(z, old + 1) : kind === "n" ? Math.max(0, old - 1) : old;
+  const doc = { fortschritt_id: C.pid + "_" + vid, profil_id: C.pid, vokabel_id: vid, stufe: s,
+    anzahl_abfragen: (prev?.anzahl_abfragen || 0) + 1, anzahl_nicht: (prev?.anzahl_nicht || 0) + (kind === "n" ? 1 : 0), zuletzt_abgefragt: now(),
+    gelernt_am: s >= z ? (prev?.gelernt_am || now()) : null };
+  const learned = s >= z && old < z;
+  R.hist.push({ i: R.i, vid, prev, kind, learned, key });
+  C.prog.set(vid, doc);
+  Store.saveProgress(doc).catch(() => toast("Fortschritt nicht gespeichert. Internet prüfen."));
+  R.st[kind]++; if (learned) R.st.neu++;
+  const pu = perUnit(key); pu.n++; pu[kind === "n" ? "x" : kind]++;
+  R.i++;
+  if (R.i >= R.queue.length) return roundDone();
+  renderCard();
+}
+function undo(){
+  const h = R.hist.pop(); if (!h) return;
+  if (h.prev){ C.prog.set(h.vid, h.prev); Store.saveProgress(h.prev).catch(() => toast("Korrektur nicht gespeichert")); }
+  else { C.prog.delete(h.vid); Store.deleteProgress(C.pid + "_" + h.vid).catch(() => toast("Korrektur nicht gespeichert")); }
+  R.st[h.kind]--; if (h.learned) R.st.neu--;
+  const pu = perUnit(h.key); pu.n--; pu[h.kind === "n" ? "x" : h.kind]--;
+  R.i = h.i; R.active = true;
+  renderCard(true); show("s-card");
+}
+$("btn-undo").onclick = undo;
+$("btn-fix").onclick = undo;
+async function finishRound(){
+  if (!R.active) return;
+  R.active = false;
+  const ende = now(), dauer = Math.max(0, Math.round((Date.parse(ende) - Date.parse(R.beginn)) / 1000));
+  for (const [key, pu] of R.per){
+    const id = R.runde + "_" + key, u = B.units.get(key);
+    try {
+      if (pu.n > 0){
+        await Store.saveSession({ uebung_id: id, runde_id: R.runde, profil_id: C.pid, lektion_id: u.lektion_id, unterlektion_id: u.unterlektion_id, richtung: C.dir,
+          beginn: R.beginn, ende, dauer_sekunden: dauer, anzahl_vokabeln: pu.n, anzahl_gewusst: pu.g, anzahl_fast: pu.f, anzahl_nicht: pu.x });
+        R.saved.add(id);
+      } else if (R.saved.has(id)){ await Store.deleteSession(id); R.saved.delete(id); }
+    } catch { toast("Übung nicht gespeichert. Internet prüfen."); }
+  }
+}
+function roundDone(){
+  finishRound();
+  const open = vocabOf(R.keys).filter(v => !isDone(v)).length;
+  $("st-g").textContent = R.st.g; $("st-f").textContent = R.st.f; $("st-n").textContent = R.st.n;
+  $("done-title").textContent = open ? "Runde geschafft" : "Alles gelernt!";
+  $("done-sub").textContent = (R.st.neu ? plural(R.st.neu, "Vokabel", "Vokabeln") + " neu gelernt. " : "") + (open ? open + " noch offen." : "In dieser Auswahl ist jede Vokabel gelernt.");
+  $("btn-again").hidden = !open;
+  $("btn-again").textContent = `Nochmal (${plural(open, "Karte", "Karten")})`;
+  $("btn-fix").hidden = !R.hist.length;
+  show("s-done");
+}
+$("btn-again").onclick = startRound;
+$("btn-other").onclick = goSetup;
+$("btn-stop").onclick = () => R.hist.length ? roundDone() : (R.active = false, goSetup());
+
+/* ===== Eltern-Bereich ===== */
+const P = { vocab: [], prog: new Map(), zu: new Map(), open: new Set(), sort: new Map(), sess: new Map(), edit: null };
+$("btn-parent").onclick = () => pinFlow({ title: "Eltern-Bereich", hash: B.einst?.eltern_pin_hash || null, salt: "eltern",
+  onSet: async h => { await Store.setParentPin(h); B.einst = { ...(B.einst || {}), eltern_pin_hash: h }; },
+  onOk: loadParent });
+async function loadParent(){
+  show("s-loading");
+  try {
+    await loadBase();
+    const [voc, zu, bz, ...progs] = await Promise.all([Store.vocabFor([...B.lektionen.keys()]), Store.all("zuordnungen"), Store.all("buch_zuordnungen"), ...B.profile.map(p => Store.progressFor(p.profil_id))]);
+    P.bz = new Set(bz.map(b => b.buch_zuordnung_id));
+    P.vocab = voc;
+    P.zu = new Map(zu.map(z => [z.zuordnung_id, z]));
+    P.prog = new Map(B.profile.map((p, i) => [p.profil_id, new Map(progs[i].map(x => [x.vokabel_id, x]))]));
+    P.sess = new Map();
+    setWho("parent"); renderParent(); show("s-parent");
+  } catch (e) { showError(e); }
+}
+function renderParent(){
+  const host = $("kid-list"); host.innerHTML = "";
+  const books = [...B.buecher.values()].sort((a, b) => a.titel.localeCompare(b.titel, "de"));
+  if (!B.profile.length) host.innerHTML = `<div class="panel empty">Noch keine aktiven Profile. Lege unten ein Kind an.</div>`;
+  B.profile.forEach(p => {
+    const box = document.createElement("div"); box.className = "panel kid";
+    box.innerHTML = `<div class="kid-head"><button class="fold" data-fold><span class="caret">▸</span><h2>${esc(p.name)}</h2></button><div class="kid-actions"><button class="mini" data-act="reset">PIN zurücksetzen</button><button class="mini" data-act="off">Deaktivieren</button></div></div>`;
+    const resetBtn = box.querySelector('[data-act="reset"]');
+    if (!p.pin_hash){ resetBtn.disabled = true; resetBtn.textContent = "Noch keine PIN"; }
+    resetBtn.onclick = async () => {
+      if (!resetBtn.classList.contains("warn")){ resetBtn.classList.add("warn"); resetBtn.textContent = "Wirklich zurücksetzen?"; return; }
+      try { await Store.setChildPin(p.profil_id, null); p.pin_hash = null; toast("PIN von " + p.name + " zurückgesetzt"); renderParent(); }
+      catch { toast("Zurücksetzen fehlgeschlagen"); }
+    };
+    const offBtn = box.querySelector('[data-act="off"]');
+    offBtn.onclick = async () => {
+      if (!offBtn.classList.contains("warn")){ offBtn.classList.add("warn"); offBtn.textContent = "Wirklich deaktivieren?"; return; }
+      try { await Store.setProfileActive(p.profil_id, false); p.aktiv = false; B.profile = B.allProfile.filter(x => x.aktiv !== false); toast(p.name + " deaktiviert. Der Lernstand bleibt erhalten."); renderParent(); }
+      catch { toast("Deaktivieren fehlgeschlagen"); }
+    };
+    const mine = books.filter(bk => P.bz.has(p.profil_id + "_" + bk.buch_id)), rest = books.filter(bk => !mine.includes(bk));
+    const kidHead = box.querySelector(".kid-head"), kb = document.createElement("div"); kb.className = "kid-body"; box.appendChild(kb);
+    const boxMain = box; { const box = kb;
+    if (!mine.length) box.insertAdjacentHTML("beforeend", `<div class="sub">Noch kein Buch zugewiesen.</div>`);
+    mine.forEach(bk => {
+      const sec = renderBook(p, bk);
+      const rm = document.createElement("button"); rm.className = "mini"; rm.textContent = "Buch entfernen";
+      rm.onclick = async () => {
+        if (!rm.classList.contains("warn")){ rm.classList.add("warn"); rm.textContent = "Wirklich entfernen?"; return; }
+        try { await Store.unassignBook(p.profil_id + "_" + bk.buch_id); P.bz.delete(p.profil_id + "_" + bk.buch_id); toast(bk.titel + " entfernt. Der Lernstand bleibt erhalten."); renderParent(); }
+        catch { toast("Entfernen fehlgeschlagen"); }
+      };
+      sec.querySelector(".book-head").appendChild(rm);
+      box.appendChild(sec);
+    });
+    if (rest.length){
+      const row = document.createElement("div"); row.className = "book-head"; row.style.cssText = "border-top:1px solid var(--line);padding-top:12px";
+      row.innerHTML = `<select class="mini" aria-label="Buch für ${esc(p.name)} wählen">${rest.map(bk => `<option value="${esc(bk.buch_id)}">${esc(bk.titel)}</option>`).join("")}</select><button class="mini">Buch zuweisen</button>`;
+      row.querySelector("button").onclick = async () => {
+        const bid = row.querySelector("select").value, id = p.profil_id + "_" + bid;
+        try { await Store.assignBook({ buch_zuordnung_id: id, profil_id: p.profil_id, buch_id: bid, zugewiesen_am: now() }); P.bz.add(id); toast("Buch zugewiesen. Jetzt Lektionen freischalten."); renderParent(); }
+        catch { toast("Zuweisen fehlgeschlagen"); }
+      };
+      box.appendChild(row);
+    }
+    }
+    fold("k:" + p.profil_id, kidHead.querySelector("[data-fold]"), kb, kidHead);
+    host.appendChild(boxMain);
+  });
+  renderInactive();
+}
+/* Aufklappen im Eltern-Bereich; Zustand bleibt beim Neuzeichnen erhalten */
+const OPEN = new Set();
+function fold(key, btn, body){
+  const set = o => { body.hidden = !o; btn.setAttribute("aria-expanded", o); btn.querySelector(".caret").textContent = o ? "▾" : "▸"; };
+  set(OPEN.has(key));
+  btn.onclick = () => { const o = !OPEN.has(key); o ? OPEN.add(key) : OPEN.delete(key); set(o); };
+}
+function renderBook(p, bk){
+  const lessons = lessonsOfBook(bk.buch_id);
+  const units = sortUnits([...B.units.values()].filter(u => u.buch_id === bk.buch_id).map(u => u.key)).map(k => B.units.get(k));
+  const sec = document.createElement("div"); sec.className = "book";
+  sec.innerHTML = `<div class="book-head"><button class="fold" data-fold><span class="caret">▸</span><b>${esc(bk.titel)} <span class="sub" style="font-weight:400">· ${esc(B.sprachen.get(bk.sprache_id)?.name || "")}</span></b></button>${units.length ? `<span style="display:flex;gap:6px;flex:none"><button class="mini" data-all="1">Alle an</button><button class="mini" data-all="0">Alle aus</button></span>` : ""}</div>`;
+  const bb = document.createElement("div"); bb.className = "book-body"; sec.appendChild(bb);
+  if (!lessons.length) bb.insertAdjacentHTML("beforeend", `<div class="sub">Noch keine Lektionen. Sie entstehen beim ersten Scan.</div>`);
+  lessons.forEach(l => {
+    const subs = subsOf(l.lektion_id);
+    if (!subs.length) return bb.appendChild(renderUnitRow(p, B.units.get(l.lektion_id), false));
+    const lu = subs.map(u => B.units.get(u.unterlektion_id)), on = lu.filter(u => zuOf(P.zu, p.profil_id, u)?.aktiv).length;
+    const gh = document.createElement("button"); gh.className = "lesson-group fold";
+    gh.innerHTML = `<span class="caret">▸</span>${esc(l.name)} <span class="sub" style="font-weight:400">· ${on}/${lu.length} aktiv</span>`;
+    const gb = document.createElement("div"); gb.className = "lesson-body";
+    lu.forEach(u => gb.appendChild(renderUnitRow(p, u, true)));
+    bb.appendChild(gh); bb.appendChild(gb);
+    fold("l:" + p.profil_id + ":" + l.lektion_id, gh, gb);
+  });
+  fold("b:" + p.profil_id + ":" + bk.buch_id, sec.querySelector("[data-fold]"), bb);
+  sec.querySelectorAll("[data-all]").forEach(b => b.onclick = async () => {
+    const val = b.dataset.all === "1"; b.disabled = true;
+    for (const u of units){ if (!!zuOf(P.zu, p.profil_id, u)?.aktiv !== val) await setAssign(p, u, val, null, true); }
+    renderParent(); toast(val ? "Alle Lektionen aktiviert" : "Alle Lektionen deaktiviert");
+  });
+  return sec;
+}
+function renderUnitRow(p, unit, indent){
+  const zid = p.profil_id + "_" + unit.key, ex = zuOf(P.zu, p.profil_id, unit), on = !!ex?.aktiv, zcur = ex?.ziel_stufe || null;
+  const z = zcur || DEFAULT_ZIEL, prog = P.prog.get(p.profil_id);
+  const voc = P.vocab.filter(v => unitKeyOfVocab(v) === unit.key);
+  const c = countFor(voc, prog, () => z), isOpen = P.open.has(zid);
+  const wrap = document.createElement("div"); wrap.className = "lrow-wrap" + (indent ? " indent" : "");
+  wrap.innerHTML = `<div class="lrow"><label class="switch"><input type="checkbox" id="sw-${esc(zid)}" ${on ? "checked" : ""} aria-label="${esc(unit.full)} für ${esc(p.name)} aktiv"><span></span></label>
+    <button class="expand lesson" aria-expanded="${isOpen}" aria-controls="dt-${esc(zid)}"><div class="lesson-top"><span>${esc(unit.name)} <span class="caret">›</span><small>${zcur ? "Ziel " + zcur + "×" : "Ziel noch offen"}</small></span><span class="n">${c.n[2]} / ${c.total} gelernt</span></div>${stageBar(c)}</button></div>
+    <div class="detail" id="dt-${esc(zid)}" ${isOpen ? "" : "hidden"}>
+      <div class="detail-head"><span class="label">Lernziel</span><select class="mini" id="zs-${esc(zid)}" aria-label="Ziel für ${esc(unit.full)}">${zcur ? "" : `<option value="" selected>Ziel offen</option>`}${[1,2,3,4,5].map(n => `<option value="${n}" ${n === zcur ? "selected" : ""}>${n}× gewusst</option>`).join("")}</select></div>
+      <div data-body></div></div>`;
+  wrap.querySelector("input").onchange = e => setAssign(p, unit, e.target.checked, e.target);
+  wrap.querySelector("select").onchange = e => setGoal(p, unit, +e.target.value);
+  const detail = wrap.querySelector(".detail"), body = wrap.querySelector("[data-body]");
+  wrap.querySelector(".expand").onclick = () => {
+    if (P.open.has(zid)) P.open.delete(zid); else P.open.add(zid);
+    const open = P.open.has(zid);
+    wrap.querySelector(".expand").setAttribute("aria-expanded", open);
+    detail.hidden = !open;
+    if (open) renderDetail(body, p, unit, voc, prog, z);
+  };
+  if (isOpen) renderDetail(body, p, unit, voc, prog, z);
+  return wrap;
+}
+const vocabForm = (lang, v) => `<form class="vform" data-vform><div class="label">${v ? "Vokabel ändern" : "Vokabel hinzufügen"}</div>
+  <input name="fs" type="text" placeholder="${esc(lang)}" value="${esc(v?.fremdsprache)}" autocomplete="off" aria-label="${esc(lang)}">
+  <input name="de" type="text" placeholder="Deutsch" value="${esc(v?.deutsch)}" autocomplete="off" aria-label="Deutsch">
+  <input name="hint" type="text" placeholder="Hinweis (optional)" value="${esc(v?.hinweis)}" autocomplete="off" aria-label="Hinweis">
+  <input name="page" type="text" inputmode="numeric" placeholder="Buchseite (optional)" value="${esc(v?.buchseite)}" autocomplete="off" aria-label="Buchseite">
+  <div class="row"><button class="btn primary" type="submit">Speichern</button><button class="btn ghost" type="button" data-cancel>Abbrechen</button></div>
+  ${v ? `<button class="mini" type="button" data-del>Vokabel löschen</button>` : ""}</form>`;
+async function saveVocab(form, unit, cur){
+  const g = n => form.elements[n].value.trim();
+  const fs = g("fs"), de = g("de"), hint = g("hint"), pg = parseInt(g("page"), 10);
+  if (!fs || !de) return toast("Bitte Fremdsprache und Deutsch ausfüllen");
+  if (P.vocab.some(v => unitKeyOfVocab(v) === unit.key && v.deutsch === de && v.fremdsprache === fs && v.vokabel_id !== cur?.vokabel_id)) return toast("Diese Vokabel gibt es in der Lerneinheit schon");
+  let d;
+  if (cur) d = { ...cur, deutsch: de, fremdsprache: fs, hinweis: hint || null, buchseite: pg > 0 ? pg : null, geaendert_am: now() };
+  else {
+    const nums = P.vocab.filter(v => unitKeyOfVocab(v) === unit.key).map(v => parseInt(String(v.vokabel_id).split("-").pop(), 10) || 0);
+    d = { vokabel_id: unit.key + "-" + String(Math.max(0, ...nums) + 1).padStart(3, "0"), lektion_id: unit.lektion_id, unterlektion_id: unit.unterlektion_id,
+      deutsch: de, fremdsprache: fs, hinweis: hint || null, buchseite: pg > 0 ? pg : null, erstellt_am: now(), geaendert_am: now() };
+  }
+  try {
+    await Store.set("vokabeln", d.vokabel_id, d);
+    const i = P.vocab.findIndex(v => v.vokabel_id === d.vokabel_id);
+    if (i >= 0) P.vocab[i] = d; else P.vocab.push(d);
+    P.edit = null; toast(cur ? "Vokabel geändert" : "Vokabel hinzugefügt"); renderParent();
+  } catch { toast("Speichern fehlgeschlagen"); }
+}
+async function deleteVocab(v){
+  try {
+    const fp = await Store.where("fortschritt", "vokabel_id", "==", v.vokabel_id);
+    await Store.del("vokabeln", v.vokabel_id);
+    for (const f of fp){ await Store.deleteProgress(f.fortschritt_id); P.prog.get(f.profil_id)?.delete(v.vokabel_id); }
+    P.vocab = P.vocab.filter(x => x.vokabel_id !== v.vokabel_id);
+    P.edit = null; toast("Vokabel gelöscht"); renderParent();
+  } catch { toast("Löschen fehlgeschlagen"); }
+}
+function renderDetail(el, p, unit, voc, prog, z){
+  const zid = p.profil_id + "_" + unit.key, mode = P.sort.get(zid) || "buch";
+  const rows = voc.map(v => ({ v, f: prog?.get(v.vokabel_id) })).map(r => ({ ...r, s: r.f?.stufe ?? 0 }));
+  if (mode === "schwer") rows.sort((a, b) => (a.s >= z) - (b.s >= z) || a.s - b.s || (b.f?.anzahl_nicht || 0) - (a.f?.anzahl_nicht || 0) || (b.f?.anzahl_abfragen || 0) - (a.f?.anzahl_abfragen || 0));
+  else rows.sort((a, b) => a.v.vokabel_id.localeCompare(b.v.vokabel_id));
+  const lang = B.sprachen.get(B.buecher.get(unit.buch_id)?.sprache_id)?.name || "Fremdsprache";
+  const pill = s => `<span class="pill ${s >= z ? "p2" : s > 0 ? "p1" : "p0"}">${s >= z ? "gelernt" : Math.min(s, z) + "/" + z}</span>`;
+  const ed = P.edit && P.edit.zid === zid ? P.edit : null;
+  const cur = ed?.vid ? voc.find(v => v.vokabel_id === ed.vid) || null : null;
+  el.style.cssText = "display:flex;flex-direction:column;gap:12px";
+  el.innerHTML = `<div class="detail-head"><span class="label">Vokabeln (${voc.length})</span><span style="display:flex;gap:6px;flex-wrap:wrap">${voc.length ? `<button class="mini" data-sort>${mode === "schwer" ? "Nach Buch sortieren" : "Schwierigste zuerst"}</button>` : ""}<button class="mini" data-add>+ Vokabel</button></span></div>
+    ${ed ? vocabForm(lang, cur) : ""}
+    ${voc.length ? `<div class="tscroll"><table class="vt"><thead><tr><th>${esc(lang)}</th><th>Deutsch</th><th>Stand</th><th>Versuche</th><th>Zuletzt</th><th></th></tr></thead><tbody>${
+      rows.map(r => `<tr><td>${esc(r.v.fremdsprache)}</td><td>${esc(r.v.deutsch)}</td><td class="num">${pill(r.s)}</td><td class="num">${r.f ? (r.f.anzahl_abfragen || 0) + (r.f.anzahl_nicht ? ` <span class="pill pn" title="nicht gewusst">${r.f.anzahl_nicht}</span>` : "") : "–"}</td><td class="num">${r.f ? fmtDay(r.f.zuletzt_abgefragt) : "–"}</td><td><button class="mini" data-edit="${esc(r.v.vokabel_id)}">Ändern</button></td></tr>`).join("")
+    }</tbody></table></div>` : `<span class="sub">Noch keine Vokabeln.</span>`}
+    <div class="label">Übungen</div><div class="sessions" data-sess><span class="sub">Übungen werden geladen …</span></div>`;
+  const again = () => renderDetail(el, p, unit, voc, prog, z);
+  const sb = el.querySelector("[data-sort]");
+  if (sb) sb.onclick = () => { P.sort.set(zid, mode === "schwer" ? "buch" : "schwer"); again(); };
+  el.querySelector("[data-add]").onclick = () => { P.edit = { zid, vid: null }; again(); };
+  el.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => { P.edit = { zid, vid: b.dataset.edit }; again(); });
+  const form = el.querySelector("[data-vform]");
+  if (form){
+    form.querySelector("[data-cancel]").onclick = () => { P.edit = null; again(); };
+    form.onsubmit = e => { e.preventDefault(); saveVocab(form, unit, cur); };
+    const del = form.querySelector("[data-del]");
+    if (del) del.onclick = () => {
+      if (!del.classList.contains("warn")){ del.classList.add("warn"); del.textContent = "Wirklich löschen? Der Lernstand dazu geht verloren."; return; }
+      deleteVocab(cur);
+    };
+  }
+  const target = el.querySelector("[data-sess]");
+  const draw = list => {
+    if (!list.length){ target.innerHTML = `<span class="sub">Noch keine Übungen.</span>`; return; }
+    target.innerHTML = list.slice().sort((a, b) => b.beginn.localeCompare(a.beginn)).map(u =>
+      `<div class="sess"><div><div class="when">${esc(fmtDate(u.beginn))}</div><div class="meta">${fmtDur(u.dauer_sekunden || 0)} · ${plural(u.anzahl_vokabeln, "Vokabel", "Vokabeln")} · ${u.richtung === "fs-de" ? esc(lang) + " → Deutsch" : "Deutsch → " + esc(lang)}</div></div>
+       <div class="res"><span class="pill pg" title="gewusst">${u.anzahl_gewusst}</span><span class="pill pf" title="fast gewusst">${u.anzahl_fast}</span><span class="pill pn" title="nicht gewusst">${u.anzahl_nicht}</span></div></div>`).join("");
+  };
+  if (P.sess.has(zid)) return draw(P.sess.get(zid));
+  Store.sessionsFor(p.profil_id, unit).then(list => { P.sess.set(zid, list); if (el.isConnected) draw(list); })
+    .catch(() => { target.innerHTML = `<span class="sub">Übungen konnten nicht geladen werden.</span>`; });
+}
+function renderInactive(){
+  const off = B.allProfile.filter(p => p.aktiv === false), host = $("inactive-list");
+  host.innerHTML = off.length ? `<div class="label" style="margin-top:6px">Deaktivierte Profile</div>` : "";
+  off.forEach(p => {
+    const row = document.createElement("div"); row.className = "inactive";
+    row.innerHTML = `<span>${esc(p.name)}</span><button class="mini">Wieder aktivieren</button>`;
+    row.querySelector("button").onclick = async () => {
+      try { await Store.setProfileActive(p.profil_id, true); await loadParent(); toast(p.name + " ist wieder aktiv"); }
+      catch { toast("Aktivieren fehlgeschlagen"); }
+    };
+    host.appendChild(row);
+  });
+}
+$("form-kid").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = $("kid-name").value.trim().replace(/\s+/g, " ");
+  if (!name) return toast("Bitte einen Namen eingeben");
+  if (B.allProfile.some(p => p.name.toLowerCase() === name.toLowerCase())) return toast("Diesen Namen gibt es schon");
+  let id = slug(name), n = 2; while (B.allProfile.some(p => p.profil_id === id)) id = slug(name) + "-" + n++;
+  const d = { profil_id: id, name, pin_hash: null, aktiv: true, erstellt_am: now() };
+  try { await Store.addProfile(d); B.allProfile.push(d); B.allProfile.sort((a, b) => a.name.localeCompare(b.name, "de")); B.profile = B.allProfile.filter(x => x.aktiv !== false); P.prog.set(id, new Map()); $("kid-name").value = ""; renderParent(); toast(name + " angelegt. Jetzt Lektionen freischalten."); }
+  catch { toast("Anlegen fehlgeschlagen. Internet prüfen."); }
+});
+async function setAssign(p, unit, on, input, quiet){
+  const d = zuDoc(p.profil_id, unit, zuOf(P.zu, p.profil_id, unit), { aktiv: on });
+  try { await Store.saveAssignment(d); P.zu.set(d.zuordnung_id, d); if (!quiet) toast(unit.full + (on ? " aktiviert" : " deaktiviert")); }
+  catch { if (input) input.checked = !on; toast("Änderung nicht gespeichert"); }
+}
+async function setGoal(p, unit, val){
+  const d = zuDoc(p.profil_id, unit, zuOf(P.zu, p.profil_id, unit), { ziel_stufe: val });
+  try { await Store.saveAssignment(d); P.zu.set(d.zuordnung_id, d); toast("Ziel für " + unit.full + ": " + val + "×"); }
+  catch { toast("Ziel nicht gespeichert"); }
+  renderParent();
+}
+/* ===== Dateien speichern (normaler Browser-Download) ===== */
+function saveFile(name, text, mime){
+  const url = URL.createObjectURL(new Blob([text], { type: mime + ";charset=utf-8" }));
+  const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+async function exportCsv(){
+  const cell = s => '"' + String(s ?? "").replace(/"/g, '""') + '"';
+  const head = ["Buch","Lektion","Unterlektion","Fremdsprache","Deutsch","Hinweis", ...B.profile.flatMap(p => ["Stufe " + p.name, "Versuche " + p.name, "Nicht gewusst " + p.name])];
+  const sorted = P.vocab.slice().sort((a, b) => a.vokabel_id.localeCompare(b.vokabel_id));
+  const lines = [head.map(cell).join(";")].concat(sorted.map(v => {
+    const l = B.lektionen.get(v.lektion_id), u = v.unterlektion_id ? B.unter.get(v.unterlektion_id) : null;
+    return [B.buecher.get(l?.buch_id)?.titel, l?.name, u?.name, v.fremdsprache, v.deutsch, v.hinweis, ...B.profile.flatMap(p => { const f = P.prog.get(p.profil_id)?.get(v.vokabel_id); return [f?.stufe ?? 0, f?.anzahl_abfragen ?? 0, f?.anzahl_nicht ?? 0]; })].map(cell).join(";");
+  }));
+  saveFile("vokabelapp-lernstand-" + now().slice(0, 10) + ".csv", "\uFEFF" + lines.join("\r\n"), "text/csv");
+  toast("CSV gespeichert");
+}
+$("btn-export").onclick = exportCsv;
+
+/* ===== JSON: Sicherung und Import ===== */
+const COLS = { sprachen: "sprache_id", buecher: "buch_id", lektionen: "lektion_id", unterlektionen: "unterlektion_id", vokabeln: "vokabel_id",
+  profile: "profil_id", einstellungen: "einstellung_id", zuordnungen: "zuordnung_id", buch_zuordnungen: "buch_zuordnung_id", fortschritt: "fortschritt_id", uebungen: "uebung_id" };
+const STAMM = ["sprachen", "buecher", "lektionen", "unterlektionen", "vokabeln"];
+$("btn-export-json").onclick = async () => {
+  const btn = $("btn-export-json"); btn.disabled = true;
+  try {
+    const daten = {};
+    for (const col of Object.keys(COLS)) daten[col] = await Store.all(col);
+    saveFile("vokabelapp-sicherung-" + now().slice(0, 10) + ".json", JSON.stringify({ format: "vokabelapp-v5", exportiert_am: now(), daten }, null, 1), "application/json");
+    toast("Sicherung gespeichert");
+  } catch { toast("Sicherung fehlgeschlagen"); }
+  finally { btn.disabled = false; }
+};
+let IMP = null;
+const vkey = v => (v.unterlektion_id || v.lektion_id) + "|" + v.deutsch + "|" + v.fremdsprache;
+async function planImport(obj, over){
+  const data = obj && typeof obj === "object" ? (obj.daten && typeof obj.daten === "object" ? obj.daten : obj) : {};
+  const plan = { rows: [], writes: [] };
+  const present = Object.keys(COLS).filter(c => Array.isArray(data[c]) && data[c].length);
+  if (!present.length) return plan;
+  const need = new Set([...present, "sprachen", "buecher", "lektionen", "unterlektionen"]);
+  const ex = {};
+  for (const col of need) ex[col] = new Map((await Store.all(col)).map(d => [d[COLS[col]], d]));
+  const known = col => new Set([...ex[col].keys(), ...(Array.isArray(data[col]) ? data[col] : []).map(d => d?.[COLS[col]])]);
+  const K = { sprachen: known("sprachen"), buecher: known("buecher"), lektionen: known("lektionen"), unterlektionen: known("unterlektionen") };
+  const refOk = (col, d) => {
+    if (col === "buecher") return K.sprachen.has(d.sprache_id);
+    if (col === "lektionen") return K.buecher.has(d.buch_id);
+    if (col === "unterlektionen") return K.lektionen.has(d.lektion_id);
+    if (col === "vokabeln") return K.lektionen.has(d.lektion_id) && (!d.unterlektion_id || K.unterlektionen.has(d.unterlektion_id));
+    return true;
+  };
+  for (const col of present){
+    const idf = COLS[col], row = { col, neu: 0, upd: 0, same: 0, skip: 0, bad: 0 }, seen = new Set(), dup = new Map();
+    if (col === "vokabeln") for (const v of ex.vokabeln.values()) dup.set(vkey(v), v.vokabel_id);
+    for (const raw of data[col]){
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)){ row.bad++; continue; }
+      const d = { ...raw }, id = d[idf];
+      if (typeof id !== "string" || !id || id.includes("/") || seen.has(id)){ row.bad++; continue; }
+      seen.add(id);
+      if (!refOk(col, d)){ row.bad++; continue; }
+      const old = ex[col].get(id);
+      if (col === "vokabeln"){
+        d.deutsch = String(d.deutsch ?? "").trim(); d.fremdsprache = String(d.fremdsprache ?? "").trim();
+        if (!d.deutsch || !d.fremdsprache){ row.bad++; continue; }
+        const other = dup.get(vkey(d));
+        if (other && other !== id){ row.skip++; continue; }
+        dup.set(vkey(d), id);
+        if (!old){ d.erstellt_am = d.erstellt_am || now(); d.geaendert_am = d.geaendert_am || now(); }
+      }
+      if (col === "buecher" && !old) d.erstellt_am = d.erstellt_am || now();
+      if (!old){ row.neu++; plan.writes.push({ col, id, doc: d, merge: false }); }
+      else if (STAMM.includes(col) || over){
+        if (Object.keys(d).every(k => JSON.stringify(old[k]) === JSON.stringify(d[k]))) row.same++;
+        else { row.upd++; plan.writes.push({ col, id, doc: d, merge: true }); }
+      } else row.skip++;
+    }
+    plan.rows.push(row);
+  }
+  return plan;
+}
+function renderImport(){
+  const host = $("import-preview");
+  if (!IMP){ host.innerHTML = ""; return; }
+  const { plan, over } = IMP, n = plan.writes.length;
+  host.innerHTML = `<div class="detail"><div class="label">Import-Vorschau</div>${
+    plan.rows.length ? `<div class="tscroll"><table class="vt"><thead><tr><th>Tabelle</th><th>Neu</th><th>Geändert</th><th>Gleich</th><th>Übersprungen</th><th>Fehlerhaft</th></tr></thead><tbody>${
+      plan.rows.map(r => `<tr><td>${esc(r.col)}</td><td class="num">${r.neu}</td><td class="num">${r.upd}</td><td class="num">${r.same}</td><td class="num">${r.skip}</td><td class="num">${r.bad}</td></tr>`).join("")
+    }</tbody></table></div>` : `<span class="sub">Die Datei enthält keine bekannten Daten.</span>`}
+    <label class="sub" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="imp-over" ${over ? "checked" : ""}> Vorhandene Profil- und Lerndaten überschreiben</label>
+    <div class="row"><button class="btn primary" id="imp-go" ${n ? "" : "disabled"}>${plural(n, "Datensatz", "Datensätze")} schreiben</button><button class="btn ghost" id="imp-cancel">Abbrechen</button></div></div>`;
+  $("imp-cancel").onclick = () => { IMP = null; renderImport(); };
+  $("imp-over").onchange = async e => {
+    try { IMP.over = e.target.checked; IMP.plan = await planImport(IMP.obj, IMP.over); renderImport(); }
+    catch { toast("Vorschau konnte nicht aktualisiert werden"); }
+  };
+  $("imp-go").onclick = runImport;
+}
+async function runImport(){
+  if (!navigator.onLine) return toast("Der Import braucht Internet");
+  const w = IMP.plan.writes, go = $("imp-go"); go.disabled = true;
+  try {
+    for (let i = 0; i < w.length; i += 400){
+      const batch = Store.db.batch();
+      w.slice(i, i + 400).forEach(it => { const ref = Store.db.collection(it.col).doc(it.id); it.merge ? batch.set(ref, it.doc, { merge: true }) : batch.set(ref, it.doc); });
+      go.textContent = "Schreibe … " + Math.min(i + 400, w.length) + " / " + w.length;
+      await batch.commit();
+    }
+    IMP = null; renderImport(); toast("Import fertig: " + plural(w.length, "Datensatz", "Datensätze"));
+    await loadParent();
+  } catch (e) { console.error(e); toast("Import unterbrochen (" + (e.code || "Fehler") + "). Bitte erneut starten, schon Geschriebenes wird dabei übersprungen."); go.disabled = false; }
+}
+$("btn-import").onclick = () => $("file-import").click();
+$("file-import").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  if (!navigator.onLine) return toast("Der Import braucht Internet");
+  let obj;
+  try { obj = JSON.parse((await f.text()).replace(/^\uFEFF/, "")); } catch { return toast("Das ist keine gültige JSON-Datei"); }
+  try { IMP = { obj, over: false, plan: await planImport(obj, false) }; renderImport(); }
+  catch (err) { console.error(err); toast("Import konnte nicht vorbereitet werden"); }
+};
+$("btn-signout").onclick = async () => {
+  if (pending > 0) return toast("Es gibt noch nicht abgeglichene Änderungen. Bitte erst online gehen.");
+  if (!confirm("Dieses Gerät vom Familien-Konto abmelden? Zum erneuten Anmelden wird Internet gebraucht.")) return;
+  try { await Auth.signOut(); } catch {}
+  location.reload();
+};
+
+/* ===== Anmeldung (Familien-Konto) und Start ===== */
+let Auth = null;
+function showError(e, text){ if (e) console.error(e); $("err-text").textContent = text || "Die Daten konnten nicht geladen werden. Bitte Internet prüfen und erneut versuchen."; setWho(null); show("s-error"); }
+$("btn-retry").onclick = boot;
+function goLogin(){ setWho(null); $("login-msg").textContent = navigator.onLine ? "" : "Zum ersten Anmelden wird Internet gebraucht."; show("s-login"); }
+$("form-login").addEventListener("submit", async e => {
+  e.preventDefault();
+  $("login-msg").textContent = "";
+  try { await Auth.signInWithEmailAndPassword($("login-mail").value.trim(), $("login-pw").value); $("login-pw").value = ""; boot(); }
+  catch (err) {
+    const c = err.code || "";
+    $("login-msg").textContent = c === "auth/network-request-failed" ? "Keine Verbindung. Bitte Internet prüfen." : c.includes("too-many") ? "Zu viele Versuche. Bitte kurz warten." : "E-Mail oder Passwort stimmt nicht.";
+  }
+});
+async function boot(){
+  show("s-loading");
+  try {
+    if (typeof firebase === "undefined") return showError(null, "Die App-Bausteine fehlen. Beim ersten Start wird Internet gebraucht.");
+    const cfg = window.FIREBASE_CONFIG;
+    if (!cfg || !cfg.apiKey || /^DEIN/i.test(cfg.apiKey)) return showError(null, "Die Firebase-Konfiguration fehlt. Bitte firebase-config.js ausfüllen.");
+    if (!Auth){
+      firebase.initializeApp(cfg);
+      const db = firebase.firestore();
+      db.enablePersistence({ synchronizeTabs: true }).catch(e => { if (e.code === "unimplemented" || e.code === "failed-precondition") toast("Der Offline-Speicher steht in diesem Browser nicht zur Verfügung."); });
+      Store.db = db; Auth = firebase.auth();
+    }
+    const user = await new Promise(res => { const off = Auth.onAuthStateChanged(u => { off(); res(u); }); });
+    if (!user) return goLogin();
+    try { navigator.storage?.persist?.(); } catch {}
+    await loadBase();
+    goProfiles();
+  } catch (e) { showError(e); }
+}
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(e => console.warn("Service Worker:", e)));
+netState();
+boot();
+</script>
+</body>
+</html>

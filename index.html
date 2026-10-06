@@ -735,12 +735,13 @@ function shrinkImage(file, maxW = 300, maxH = 420){
     img.src = url;
   });
 }
-/* Aufklappbare Bereiche im Eltern-Bereich; Zustand bleibt auf dem Gerät gespeichert */
-document.querySelectorAll("[data-sect]").forEach(btn => {
+/* Aufklappbare Bereiche im Eltern-Bereich; beim Öffnen des Eltern-Bereichs sind alle zugeklappt */
+const SECT = [...document.querySelectorAll("[data-sect]")].map(btn => {
   const k = btn.dataset.sect, body = $("sect-" + k);
   const set = o => { body.hidden = !o; btn.setAttribute("aria-expanded", o); btn.querySelector(".caret").textContent = o ? "▾" : "▸"; };
-  set(pref.get("sect-" + k, k === "personen" ? "1" : "0") === "1");
-  btn.onclick = () => { const o = body.hidden; pref.set("sect-" + k, o ? "1" : "0"); set(o); };
+  set(false);
+  btn.onclick = () => set(body.hidden);
+  return set;
 });
 function parentSums(){
   const n = B.profile.length, nb = B.buecher.size;

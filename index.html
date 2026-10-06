@@ -341,12 +341,9 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 
     <button class="panel sect-head" data-sect="buecher" aria-expanded="false"><span class="caret">▸</span><span class="st">Bücher<small id="sum-buecher"></small></span></button>
     <div class="sect-body" id="sect-buecher" hidden>
-      <div class="panel addkid">
-        <h2 style="margin:0">Buchcover</h2>
-        <p class="sub" style="font-size:14px">Foto vom Cover machen oder ein Bild wählen. Die App verkleinert es automatisch. Es erscheint auf der Startseite der Kinder. Zugewiesen werden Bücher unter „Personen“ beim jeweiligen Kind.</p>
-        <div id="cover-list"></div>
-        <input type="file" id="file-cover" accept="image/*" hidden>
-      </div>
+      <p class="sub" style="font-size:14px">Tippe auf ein Buch, um Lektionen, Unterlektionen und Vokabeln zu sehen. Das Cover (Foto oder Bild) erscheint auf der Startseite der Kinder. Zugewiesen werden Bücher unter „Personen“ beim jeweiligen Kind.</p>
+      <div id="cover-list" style="display:flex;flex-direction:column;gap:14px"></div>
+      <input type="file" id="file-cover" accept="image/*" hidden>
     </div>
 
     <button class="panel sect-head" data-sect="daten" aria-expanded="false"><span class="caret">▸</span><span class="st">Daten Im- und Export<small>Vokabeln importieren, Sicherung, Lernstand als Tabelle</small></span></button>
@@ -746,25 +743,67 @@ const SECT = [...document.querySelectorAll("[data-sect]")].map(btn => {
 function parentSums(){
   const n = B.profile.length, nb = B.buecher.size;
   $("sum-personen").textContent = plural(n, "Kind", "Kinder") + " · Konten, Bücher zuweisen, Lernstand";
-  $("sum-buecher").textContent = plural(nb, "Buch", "Bücher") + " · Cover";
+  $("sum-buecher").textContent = plural(nb, "Buch", "Bücher") + " · Lektionen, Vokabeln, Cover";
 }
 let coverFor = null;
+/* Abschnitt „Bücher“: jedes Buch aufklappbar mit Cover, Lektionen, Unterlektionen und Vokabeln (nur ansehen) */
 function renderCovers(){
   const host = $("cover-list"); host.innerHTML = "";
   const books = [...B.buecher.values()].sort((a, b) => a.titel.localeCompare(b.titel, "de"));
-  if (!books.length) host.innerHTML = `<div class="sub">Noch keine Bücher.</div>`;
-  books.forEach(bk => {
-    const row = document.createElement("div"); row.className = "cover-row";
-    row.innerHTML = `${coverHtml(bk)}<b style="min-width:0;overflow-wrap:anywhere">${esc(bk.titel)}</b><div class="act"><button class="mini" data-pick>${bk.cover ? "Ändern" : "Cover wählen"}</button>${bk.cover ? `<button class="mini" data-rm>Entfernen</button>` : ""}</div>`;
-    row.querySelector("[data-pick]").onclick = () => { coverFor = bk.buch_id; $("file-cover").click(); };
-    const rm = row.querySelector("[data-rm]");
-    if (rm) rm.onclick = async () => {
-      if (!rm.classList.contains("warn")){ rm.classList.add("warn"); rm.textContent = "Wirklich?"; return; }
-      try { await Store.live("buecher", bk.buch_id, { cover: null }, true); bk.cover = null; renderCovers(); toast("Cover entfernt"); }
-      catch (e) { console.error(e); toast(accMsg(e)); }
-    };
-    host.appendChild(row);
+  if (!books.length) host.innerHTML = `<div class="panel empty">Noch keine Bücher. Neue Bücher kommen über „Daten Im- und Export“.</div>`;
+  books.forEach(bk => host.appendChild(renderBookView(bk)));
+}
+const vocabOfUnit = key => P.vocab.filter(v => unitKeyOfVocab(v) === key).sort((a, b) => a.vokabel_id.localeCompare(b.vokabel_id, "de", { numeric: true }));
+function vocabTable(list, lang){
+  if (!list.length) return `<span class="sub">Noch keine Vokabeln.</span>`;
+  return `<div class="tscroll"><table class="vt"><thead><tr><th>${esc(lang)}</th><th>Deutsch</th><th>Hinweis</th><th>Seite</th></tr></thead><tbody>${
+    list.map(v => `<tr><td>${esc(v.fremdsprache)}</td><td>${esc(v.deutsch)}</td><td>${esc(v.hinweis || "")}</td><td class="num">${esc(v.buchseite ?? "")}</td></tr>`).join("")
+  }</tbody></table></div>`;
+}
+/* Aufklapper, der den Inhalt erst beim ersten Öffnen zeichnet (große Bücher bleiben schnell) */
+function lazyFold(key, btn, body, draw){
+  let drawn = false;
+  const set = o => { body.hidden = !o; btn.setAttribute("aria-expanded", o); btn.querySelector(".caret").textContent = o ? "▾" : "▸"; if (o && !drawn){ drawn = true; draw(); } };
+  set(OPEN.has(key));
+  btn.onclick = () => { const o = !OPEN.has(key); o ? OPEN.add(key) : OPEN.delete(key); set(o); };
+}
+function renderBookView(bk){
+  const lessons = lessonsOfBook(bk.buch_id), lang = B.sprachen.get(bk.sprache_id)?.name || "Fremdsprache";
+  const lids = new Set(lessons.map(l => l.lektion_id)), nv = P.vocab.filter(v => lids.has(v.lektion_id)).length;
+  const box = document.createElement("div"); box.className = "panel kid";
+  box.innerHTML = `<div class="book-head"><button class="fold" data-fold style="flex:1 1 200px"><span class="caret">▸</span><span style="width:40px;flex:none">${coverHtml(bk)}</span><span style="min-width:0"><b style="overflow-wrap:anywhere">${esc(bk.titel)}</b><small class="sub" style="display:block;font-size:13px">${esc(lang)} · ${plural(lessons.length, "Lektion", "Lektionen")} · ${plural(nv, "Vokabel", "Vokabeln")}</small></span></button>
+    <span class="act" style="display:flex;gap:6px;flex-wrap:wrap"><button class="mini" data-pick>${bk.cover ? "Cover ändern" : "Cover wählen"}</button>${bk.cover ? `<button class="mini" data-rm>Cover entfernen</button>` : ""}</span></div>`;
+  box.querySelector(".cover span")?.style.setProperty("font-size", "18px");
+  const body = document.createElement("div"); body.className = "book-body"; box.appendChild(body);
+  box.querySelector("[data-pick]").onclick = () => { coverFor = bk.buch_id; $("file-cover").click(); };
+  const rm = box.querySelector("[data-rm]");
+  if (rm) rm.onclick = async () => {
+    if (!rm.classList.contains("warn")){ rm.classList.add("warn"); rm.textContent = "Wirklich?"; return; }
+    try { await Store.live("buecher", bk.buch_id, { cover: null }, true); bk.cover = null; renderCovers(); toast("Cover entfernt"); }
+    catch (e) { console.error(e); toast(accMsg(e)); }
+  };
+  lazyFold("bv:" + bk.buch_id, box.querySelector("[data-fold]"), body, () => {
+    if (!lessons.length) return body.insertAdjacentHTML("beforeend", `<div class="sub">Noch keine Lektionen.</div>`);
+    lessons.forEach(l => {
+      const subs = subsOf(l.lektion_id), lv = P.vocab.filter(v => v.lektion_id === l.lektion_id).length;
+      const gh = document.createElement("button"); gh.className = "lesson-group fold";
+      gh.innerHTML = `<span class="caret">▸</span>${esc(l.name)} <span class="sub" style="font-weight:400;text-transform:none;letter-spacing:0">· ${subs.length ? plural(subs.length, "Unterlektion", "Unterlektionen") + " · " : ""}${plural(lv, "Vokabel", "Vokabeln")}</span>`;
+      const gb = document.createElement("div"); gb.className = "lesson-body"; gb.style.marginLeft = "20px";
+      body.appendChild(gh); body.appendChild(gb);
+      lazyFold("bv:" + l.lektion_id, gh, gb, () => {
+        if (!subs.length) return gb.insertAdjacentHTML("beforeend", vocabTable(vocabOfUnit(l.lektion_id), lang));
+        subs.forEach(u => {
+          const list = vocabOfUnit(u.unterlektion_id);
+          const sh = document.createElement("button"); sh.className = "fold";
+          sh.innerHTML = `<span class="caret">▸</span><span>${esc(u.name)} <span class="sub" style="font-size:13px">· ${plural(list.length, "Vokabel", "Vokabeln")}</span></span>`;
+          const sb = document.createElement("div"); sb.className = "lesson-body"; sb.style.marginLeft = "20px";
+          gb.appendChild(sh); gb.appendChild(sb);
+          lazyFold("bv:" + u.unterlektion_id, sh, sb, () => sb.insertAdjacentHTML("beforeend", vocabTable(list, lang)));
+        });
+      });
+    });
   });
+  return box;
 }
 $("file-cover").onchange = async e => {
   const f = e.target.files[0]; e.target.value = "";

@@ -397,7 +397,9 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const now = () => new Date().toISOString();
 const SECTIONS = ["s-loading","s-error","s-login","s-pin","s-books","s-settings","s-setup","s-goal","s-card","s-done","s-parent"];
-function show(id){ SECTIONS.forEach(s => $(s).hidden = s !== id); window.scrollTo(0, 0); }
+/* Nur beim Wechsel auf einen anderen Bildschirm nach oben springen; beim Neuzeichnen desselben Bildschirms bleibt die Position */
+let CUR = null;
+function show(id){ const changed = CUR !== id; CUR = id; SECTIONS.forEach(s => $(s).hidden = s !== id); if (changed) window.scrollTo(0, 0); }
 let toastT;
 function toast(t){ const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 3200); }
 function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }

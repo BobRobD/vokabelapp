@@ -1239,67 +1239,96 @@ $("btn-export-json").onclick = async () => {
 };
 let IMP = null;
 const vkey = v => (v.unterlektion_id || v.lektion_id) + "|" + v.deutsch + "|" + v.fremdsprache;
-async function planImport(obj, over){
+const norm = t => String(t ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+/* Import fügt nur NEUE Datensätze hinzu. Vorhandene werden nie verändert.
+   Buch mit gleichem Titel, aber anderer Kennung → Buch samt Lektionen und Vokabeln wird übersprungen (keine Dublette).
+   Buch mit gleicher Kennung → vorhanden, nur neue Lektionen/Vokabeln werden ergänzt. */
+async function planImport(obj){
   const data = obj && typeof obj === "object" ? (obj.daten && typeof obj.daten === "object" ? obj.daten : obj) : {};
-  const plan = { rows: [], writes: [] };
+  const plan = { rows: [], writes: [], notes: [], books: [] };
   const present = Object.keys(COLS).filter(c => Array.isArray(data[c]) && data[c].length);
   if (!present.length) return plan;
   const need = new Set([...present, "sprachen", "buecher", "lektionen", "unterlektionen"]);
   const ex = {};
   for (const col of need) ex[col] = new Map((await Store.all(col)).map(d => [d[COLS[col]], d]));
-  const known = col => new Set([...ex[col].keys(), ...(Array.isArray(data[col]) ? data[col] : []).map(d => d?.[COLS[col]])]);
-  const K = { sprachen: known("sprachen"), buecher: known("buecher"), lektionen: known("lektionen"), unterlektionen: known("unterlektionen") };
-  const refOk = (col, d) => {
-    if (col === "buecher") return K.sprachen.has(d.sprache_id);
-    if (col === "lektionen") return K.buecher.has(d.buch_id);
-    if (col === "unterlektionen") return K.lektionen.has(d.lektion_id);
-    if (col === "vokabeln") return K.lektionen.has(d.lektion_id) && (!d.unterlektion_id || K.unterlektionen.has(d.unterlektion_id));
-    return true;
+  const ok = { sprachen: new Set(ex.sprachen.keys()), buecher: new Set(ex.buecher.keys()), lektionen: new Set(ex.lektionen.keys()), unterlektionen: new Set(ex.unterlektionen.keys()) };
+  const spMap = new Map();  // Sprache aus der Datei → vorhandene Sprache mit gleichem Namen
+  const byName = {
+    sprachen: new Map([...ex.sprachen.values()].map(x => [norm(x.name), x.sprache_id])),
+    buecher: new Map([...ex.buecher.values()].map(x => [norm(x.titel), x.buch_id])),
+    lektionen: new Map([...ex.lektionen.values()].map(x => [x.buch_id + "|" + norm(x.name), x.lektion_id])),
+    unterlektionen: new Map([...ex.unterlektionen.values()].map(x => [x.lektion_id + "|" + norm(x.name), x.unterlektion_id]))
   };
   for (const col of present){
-    const idf = COLS[col], row = { col, neu: 0, upd: 0, same: 0, skip: 0, bad: 0 }, seen = new Set(), dup = new Map();
+    const idf = COLS[col], row = { col, neu: 0, vorh: 0, skip: 0, bad: 0 }, seen = new Set(), dup = new Map();
     if (col === "vokabeln") for (const v of ex.vokabeln.values()) dup.set(vkey(v), v.vokabel_id);
     for (const raw of data[col]){
       if (!raw || typeof raw !== "object" || Array.isArray(raw)){ row.bad++; continue; }
       const d = { ...raw }, id = d[idf];
       if (typeof id !== "string" || !id || id.includes("/") || seen.has(id)){ row.bad++; continue; }
       seen.add(id);
-      if (!refOk(col, d)){ row.bad++; continue; }
       const old = ex[col].get(id);
+      if (col === "sprachen"){
+        const same = byName.sprachen.get(norm(d.name));
+        if (!old && same && same !== id){ spMap.set(id, same); row.vorh++; continue; }
+        if (!old) byName.sprachen.set(norm(d.name), id);
+        ok.sprachen.add(id);
+      }
+      if (col === "buecher"){
+        if (d.sprache_id && spMap.has(d.sprache_id)) d.sprache_id = spMap.get(d.sprache_id);
+        if (!old && !ok.sprachen.has(d.sprache_id)){ row.bad++; plan.notes.push("Buch „" + d.titel + "“: Sprache fehlt, übersprungen."); continue; }
+        const same = byName.buecher.get(norm(d.titel));
+        if (!old && same){ row.skip++; plan.notes.push("Buch „" + d.titel + "“ gibt es schon. Es wird nicht doppelt angelegt; seine Lektionen und Vokabeln aus der Datei werden übersprungen."); continue; }
+        if (!old) byName.buecher.set(norm(d.titel), id);
+        ok.buecher.add(id);
+        plan.books.push(old ? "Buch „" + old.titel + "“ ist vorhanden und bleibt unverändert. Nur neue Lektionen und Vokabeln werden ergänzt." : "Buch „" + d.titel + "“ ist neu und wird angelegt.");
+      }
+      if (col === "lektionen"){
+        if (!ok.buecher.has(d.buch_id)){ row.skip++; continue; }
+        const same = byName.lektionen.get(d.buch_id + "|" + norm(d.name));
+        if (!old && same){ row.skip++; plan.notes.push("Lektion „" + d.name + "“ gibt es in diesem Buch schon, übersprungen."); continue; }
+        if (!old) byName.lektionen.set(d.buch_id + "|" + norm(d.name), id);
+        ok.lektionen.add(id);
+      }
+      if (col === "unterlektionen"){
+        if (!ok.lektionen.has(d.lektion_id)){ row.skip++; continue; }
+        const same = byName.unterlektionen.get(d.lektion_id + "|" + norm(d.name));
+        if (!old && same){ row.skip++; plan.notes.push("Unterlektion „" + d.name + "“ gibt es in dieser Lektion schon, übersprungen."); continue; }
+        if (!old) byName.unterlektionen.set(d.lektion_id + "|" + norm(d.name), id);
+        ok.unterlektionen.add(id);
+      }
       if (col === "vokabeln"){
+        if (!ok.lektionen.has(d.lektion_id) || (d.unterlektion_id && !ok.unterlektionen.has(d.unterlektion_id))){ row.skip++; continue; }
         d.deutsch = String(d.deutsch ?? "").trim(); d.fremdsprache = String(d.fremdsprache ?? "").trim();
         if (!d.deutsch || !d.fremdsprache){ row.bad++; continue; }
-        const other = dup.get(vkey(d));
-        if (other && other !== id){ row.skip++; continue; }
-        dup.set(vkey(d), id);
-        if (!old){ d.erstellt_am = d.erstellt_am || now(); d.geaendert_am = d.geaendert_am || now(); }
+        if (!old){
+          if (dup.get(vkey(d))){ row.skip++; continue; }
+          dup.set(vkey(d), id);
+          d.erstellt_am = d.erstellt_am || now(); d.geaendert_am = d.geaendert_am || now();
+        }
       }
       if (col === "buecher" && !old) d.erstellt_am = d.erstellt_am || now();
-      if (!old){ row.neu++; plan.writes.push({ col, id, doc: d, merge: false }); }
-      else if (STAMM.includes(col) || over){
-        if (Object.keys(d).every(k => JSON.stringify(old[k]) === JSON.stringify(d[k]))) row.same++;
-        else { row.upd++; plan.writes.push({ col, id, doc: d, merge: true }); }
-      } else row.skip++;
+      if (old){ row.vorh++; continue; }  // vorhandene Datensätze bleiben unverändert
+      row.neu++; plan.writes.push({ col, id, doc: d });
     }
     plan.rows.push(row);
   }
   return plan;
 }
+const COL_NAMES = { sprachen: "Sprachen", buecher: "Bücher", lektionen: "Lektionen", unterlektionen: "Unterlektionen", vokabeln: "Vokabeln", profile: "Profile", einstellungen: "Einstellungen", zuordnungen: "Freischaltungen", buch_zuordnungen: "Buch-Zuweisungen", fortschritt: "Lernstand", uebungen: "Übungen", benutzer: "Benutzer", logins: "Anmeldenamen" };
 function renderImport(){
   const host = $("import-preview");
   if (!IMP){ host.innerHTML = ""; return; }
-  const { plan, over } = IMP, n = plan.writes.length;
-  host.innerHTML = `<div class="detail"><div class="label">Import-Vorschau</div>${
-    plan.rows.length ? `<div class="tscroll"><table class="vt"><thead><tr><th>Tabelle</th><th>Neu</th><th>Geändert</th><th>Gleich</th><th>Übersprungen</th><th>Fehlerhaft</th></tr></thead><tbody>${
-      plan.rows.map(r => `<tr><td>${esc(r.col)}</td><td class="num">${r.neu}</td><td class="num">${r.upd}</td><td class="num">${r.same}</td><td class="num">${r.skip}</td><td class="num">${r.bad}</td></tr>`).join("")
+  const { plan } = IMP, n = plan.writes.length;
+  host.innerHTML = `<div class="detail"><div class="label">Import-Vorschau</div>
+    ${plan.books.map(t => `<div style="font-weight:700">${esc(t)}</div>`).join("")}
+    ${plan.notes.map(t => `<div class="pill pf" style="white-space:normal;font-size:13px;padding:6px 10px;border-radius:8px">${esc(t)}</div>`).join("")}
+    ${plan.rows.length ? `<div class="tscroll"><table class="vt"><thead><tr><th>Daten</th><th>Neu</th><th>Vorhanden</th><th>Übersprungen</th><th>Fehlerhaft</th></tr></thead><tbody>${
+      plan.rows.map(r => `<tr><td>${esc(COL_NAMES[r.col] || r.col)}</td><td class="num">${r.neu}</td><td class="num">${r.vorh}</td><td class="num">${r.skip}</td><td class="num">${r.bad}</td></tr>`).join("")
     }</tbody></table></div>` : `<span class="sub">Die Datei enthält keine bekannten Daten.</span>`}
-    <label class="sub" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="imp-over" ${over ? "checked" : ""}> Vorhandene Profil- und Lerndaten überschreiben</label>
-    <div class="row"><button class="btn primary" id="imp-go" ${n ? "" : "disabled"}>${plural(n, "Datensatz", "Datensätze")} schreiben</button><button class="btn ghost" id="imp-cancel">Abbrechen</button></div></div>`;
+    <span class="sub" style="font-size:13px">Es werden nur neue Daten hinzugefügt. Vorhandene Bücher, Vokabeln und der Lernstand bleiben unverändert.</span>
+    <div class="row"><button class="btn primary" id="imp-go" ${n ? "" : "disabled"}>${n ? plural(n, "Datensatz", "Datensätze") + " hinzufügen" : "Nichts Neues"}</button><button class="btn ghost" id="imp-cancel">Abbrechen</button></div></div>`;
   $("imp-cancel").onclick = () => { IMP = null; renderImport(); };
-  $("imp-over").onchange = async e => {
-    try { IMP.over = e.target.checked; IMP.plan = await planImport(IMP.obj, IMP.over); renderImport(); }
-    catch { toast("Vorschau konnte nicht aktualisiert werden"); }
-  };
   $("imp-go").onclick = runImport;
 }
 async function runImport(){
@@ -1308,7 +1337,7 @@ async function runImport(){
   try {
     for (let i = 0; i < w.length; i += 400){
       const batch = Store.db.batch();
-      w.slice(i, i + 400).forEach(it => { const ref = Store.db.collection(it.col).doc(it.id); it.merge ? batch.set(ref, it.doc, { merge: true }) : batch.set(ref, it.doc); });
+      w.slice(i, i + 400).forEach(it => { const ref = Store.db.collection(it.col).doc(it.id); batch.set(ref, it.doc); });
       go.textContent = "Schreibe … " + Math.min(i + 400, w.length) + " / " + w.length;
       await batch.commit();
     }
@@ -1323,7 +1352,7 @@ $("file-import").onchange = async e => {
   if (!navigator.onLine) return toast("Der Import braucht Internet");
   let obj;
   try { obj = JSON.parse((await f.text()).replace(/^\uFEFF/, "")); } catch { return toast("Das ist keine gültige JSON-Datei"); }
-  try { IMP = { obj, over: false, plan: await planImport(obj, false) }; renderImport(); }
+  try { IMP = { obj, plan: await planImport(obj) }; renderImport(); }
   catch (err) { console.error(err); toast("Import konnte nicht vorbereitet werden"); }
 };
 $("btn-parent-link").onclick = () => copyText(linkFor("eltern"));

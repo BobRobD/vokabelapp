@@ -181,6 +181,15 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .vform{display:flex;flex-direction:column;gap:8px}
 .vform input[type=text],.vform input[type=email],.vform input[type=password]{min-height:48px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:inherit;background:var(--surface);color:var(--fg);width:100%}
 .hbox{display:flex;align-items:center;gap:8px}
+/* v6: eigene Konten */
+.acct{display:flex;flex-direction:column;gap:8px;background:var(--bg);border-radius:10px;padding:12px}
+.url{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;word-break:break-all;color:var(--fg)}
+.inl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.inl input{flex:1 1 140px;min-width:0;min-height:40px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit;background:var(--surface);color:var(--fg)}
+.setrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
+.setrow .nm{display:flex;flex-direction:column;gap:6px;min-width:0}
+.setrow .nm small{color:var(--muted);font-size:13px}
+.link.msg-ok{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -200,19 +209,36 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
   </section>
 
   <section id="s-login" hidden>
-    <div><h1>Anmelden</h1><p class="sub">Einmal pro Gerät mit dem Familien-Konto anmelden. Dafür wird Internet gebraucht.</p></div>
-    <form id="form-login" class="vform">
-      <input id="login-mail" type="email" autocomplete="username" placeholder="E-Mail" required aria-label="E-Mail">
-      <input id="login-pw" type="password" autocomplete="current-password" placeholder="Passwort" required aria-label="Passwort">
-      <p class="msg" id="login-msg"></p>
-      <button class="btn primary" type="submit">Anmelden</button>
-    </form>
+    <div><h1>Anmelden</h1><p class="sub">Einmal pro Handy anmelden. Danach bleibt die App angemeldet, auch ohne Internet.</p></div>
+    <p class="msg" id="login-msg"></p>
+    <div class="panel addkid" id="login-kid">
+      <h2 style="margin:0">Kind</h2>
+      <form id="form-kid-login" class="vform">
+        <input id="login-name" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Benutzername (z. B. hannes)" required aria-label="Benutzername">
+        <button class="btn primary" type="submit">Weiter zur PIN</button>
+      </form>
+    </div>
+    <div class="panel addkid" id="login-parent">
+      <h2 style="margin:0">Eltern</h2>
+      <form id="form-login" class="vform">
+        <input id="login-mail" type="email" autocomplete="username" placeholder="E-Mail" required aria-label="E-Mail">
+        <input id="login-pw" type="password" autocomplete="current-password" placeholder="Passwort" aria-label="Passwort">
+        <button class="btn primary" type="submit">Anmelden</button>
+        <button class="link" type="button" id="btn-forgot" style="align-self:flex-start">Passwort vergessen?</button>
+      </form>
+    </div>
   </section>
 
-  <section id="s-profiles" hidden>
-    <div><h1>Wer lernt heute?</h1><p class="sub">Tippe auf deinen Namen.</p></div>
-    <div class="profiles" id="profile-list"></div>
-    <button class="link" id="btn-parent" style="align-self:center">Eltern-Bereich</button>
+  <section id="s-settings" hidden>
+    <button class="back" id="btn-settings-back">← Zurück</button>
+    <div><h1>Einstellungen</h1><p class="sub">Schalte die Lektionen frei, die du lernen willst, und lege fest, wie oft du jede Vokabel wissen willst.</p></div>
+    <div id="set-books" style="display:flex;flex-direction:column;gap:14px"></div>
+    <div class="panel addkid">
+      <h2 style="margin:0">Konto</h2>
+      <p class="sub" id="set-login"></p>
+      <button class="btn ghost" id="btn-pin-change">PIN ändern</button>
+      <button class="btn ghost" id="btn-kid-signout">Von diesem Handy abmelden</button>
+    </div>
   </section>
 
   <section id="s-pin" hidden>
@@ -240,7 +266,7 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
   </section>
 
   <section id="s-goal" hidden>
-    <div><h1>Wie oft willst du jede Vokabel wissen?</h1><p class="sub">Erst wenn du eine Vokabel so oft gewusst hast, gilt sie als gelernt. Später können nur deine Eltern das ändern.</p></div>
+    <div><h1>Wie oft willst du jede Vokabel wissen?</h1><p class="sub">Erst wenn du eine Vokabel so oft gewusst hast, gilt sie als gelernt. Ändern kannst du das später in den Einstellungen.</p></div>
     <div class="panel" style="padding:12px 16px"><div class="label">Gilt für</div><div id="goal-lessons" style="margin-top:4px;font-weight:700"></div></div>
     <div class="goals" id="goal-opts"></div>
     <button class="btn primary" id="btn-goal">Festlegen und loslegen</button>
@@ -279,24 +305,25 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
   </section>
 
   <section id="s-parent" hidden>
-    <div><h1>Eltern-Bereich</h1><p class="sub">Lektionen freischalten, Lernstand und Übungen ansehen. Tippe auf eine Lektion für Details.</p></div>
+    <div><h1>Eltern-Bereich</h1><p class="sub">Kinder und Bücher verwalten, Lernstand und Übungen ansehen. Lektionen und Lernziele legen die Kinder in ihren Einstellungen selbst fest. Tippe auf eine Lektion für Details.</p></div>
     <div class="legend"><span><i style="background:var(--s0)"></i>neu</span><span><i style="background:var(--s2)"></i>in Arbeit</span><span><i style="background:var(--s3)"></i>gelernt</span></div>
     <div id="kid-list" style="display:flex;flex-direction:column;gap:14px"></div>
     <div class="panel addkid">
       <h2 style="margin:0">Kind hinzufügen</h2>
-      <form id="form-kid"><input id="kid-name" type="text" maxlength="30" placeholder="Vorname" autocomplete="off" aria-label="Vorname des Kindes"><button class="btn primary" type="submit">Anlegen</button></form>
-      <p class="sub" style="font-size:14px">Die PIN legt das Kind beim ersten Anmelden selbst fest.</p>
+      <form id="form-kid"><input id="kid-name" type="text" maxlength="30" placeholder="Vorname" autocomplete="off" aria-label="Vorname des Kindes"><input id="kid-pin" type="password" inputmode="numeric" maxlength="4" placeholder="Start-PIN (4 Ziffern)" autocomplete="new-password" aria-label="Start-PIN"><button class="btn primary" type="submit">Anlegen</button></form>
+      <p class="sub" style="font-size:14px">Legt Profil und Konto an. Danach den Link des Kindes auf seinem Handy öffnen und einmal die PIN eingeben. Die PIN kann das Kind selbst ändern.</p>
       <div id="inactive-list"></div>
     </div>
     <div class="panel addkid">
       <h2 style="margin:0">Daten</h2>
-      <p class="sub" style="font-size:14px">Neue Bücher und Vokabeln kommen als JSON-Datei hinein. Die JSON-Sicherung enthält alles, auch die PINs.</p>
+      <p class="sub" style="font-size:14px">Neue Bücher und Vokabeln kommen als JSON-Datei hinein. Die JSON-Sicherung enthält alle Daten (keine PINs oder Passwörter).</p>
       <button class="btn ghost" id="btn-import">JSON importieren</button>
       <input type="file" id="file-import" accept=".json,application/json" hidden>
       <div id="import-preview"></div>
       <button class="btn ghost" id="btn-export-json">Alles als JSON sichern</button>
       <button class="btn ghost" id="btn-export">Lernstand als CSV (zum Ansehen)</button>
-      <button class="btn ghost" id="btn-signout">Familien-Konto abmelden</button>
+      <div class="acct"><div class="label">Link für das Eltern-Handy</div><div class="url" id="parent-link"></div><div class="inl"><button class="mini" id="btn-parent-link">Link kopieren</button></div></div>
+      <button class="btn ghost" id="btn-signout">Von diesem Gerät abmelden</button>
     </div>
   </section>
 </main>
@@ -360,29 +387,28 @@ const Store = {
   deleteSession(id){ return this.del("uebungen", id); },
   addProfile(d){ return this.set("profile", d.profil_id, d); },
   setProfileActive(pid, on){ return this.update("profile", pid, { aktiv: on }); },
-  setChildPin(pid, hash){ return this.update("profile", pid, { pin_hash: hash }); },
-  setParentPin(hash){ return this.set("einstellungen", "app", { einstellung_id: "app", eltern_pin_hash: hash, geaendert_am: now() }); }
+  /* Direktes Schreiben mit Bestätigung der Cloud (für Konten; braucht Internet) */
+  live(col, id, d, merge){ const ref = this.db.collection(col).doc(id); return withTimeout(d === null ? ref.delete() : merge ? ref.set(d, { merge: true }) : ref.set(d)); }
 };
+function withTimeout(p, ms = 15000){ return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("timeout"), { code: "timeout" })), ms))]); }
 
 /* ===== Hilfen ===== */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const now = () => new Date().toISOString();
-const SECTIONS = ["s-loading","s-error","s-login","s-profiles","s-pin","s-books","s-setup","s-goal","s-card","s-done","s-parent"];
+const SECTIONS = ["s-loading","s-error","s-login","s-pin","s-books","s-settings","s-setup","s-goal","s-card","s-done","s-parent"];
 function show(id){ SECTIONS.forEach(s => $(s).hidden = s !== id); window.scrollTo(0, 0); }
 let toastT;
 function toast(t){ const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 3200); }
 function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
-function djb2Hash(salt, pin){
-  let h = 5381; for (const c of "vokabelapp:" + salt + ":" + pin) h = ((h << 5) + h + c.charCodeAt(0)) >>> 0;
-  return "djb2-" + h.toString(16);
-}
-async function hashPin(salt, pin){
-  const txt = "vokabelapp:" + salt + ":" + pin;
-  try {
-    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
-    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
-  } catch { return djb2Hash(salt, pin); }
+/* Kinder-Konten: Firebase braucht E-Mail + mind. 6 Zeichen Passwort. Die App bildet beides intern aus Benutzername und PIN. */
+const kidPw = pin => "vokabelapp-pin-" + pin;
+const isPin = s => /^[0-9]{4}$/.test(s);
+const appUrl = () => location.origin + location.pathname;
+const linkFor = login => appUrl() + "?u=" + encodeURIComponent(login);
+async function copyText(t){
+  try { await navigator.clipboard.writeText(t); toast("Link kopiert"); }
+  catch { window.prompt("Link zum Kopieren:", t); }
 }
 const pref = { get(k, d){ try { return localStorage.getItem("va-" + k) ?? d; } catch { return d; } }, set(k, v){ try { localStorage.setItem("va-" + k, v); } catch {} } };
 const fmtDate = iso => { try { return new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return iso; } };
@@ -424,16 +450,15 @@ function slug(name){
 
 /* ===== Stammdaten und Lerneinheiten ===== */
 /* Lerneinheit = Unterlektion, wenn die Lektion welche hat, sonst die Lektion selbst. key = unterlektion_id || lektion_id */
-const B = { sprachen: new Map(), buecher: new Map(), lektionen: new Map(), unter: new Map(), units: new Map(), profile: [], allProfile: [], einst: null };
+const B = { sprachen: new Map(), buecher: new Map(), lektionen: new Map(), unter: new Map(), units: new Map(), profile: [], allProfile: [] };
 async function loadBase(){
-  const [sp, bu, le, ul, pr, ei] = await Promise.all(["sprachen","buecher","lektionen","unterlektionen","profile","einstellungen"].map(c => Store.all(c)));
+  const [sp, bu, le, ul, pr] = await Promise.all(["sprachen","buecher","lektionen","unterlektionen","profile"].map(c => Store.all(c)));
   B.sprachen = new Map(sp.map(x => [x.sprache_id, x]));
   B.buecher = new Map(bu.map(x => [x.buch_id, x]));
   B.lektionen = new Map(le.map(x => [x.lektion_id, x]));
   B.unter = new Map(ul.filter(u => B.lektionen.has(u.lektion_id)).map(x => [x.unterlektion_id, x]));
   B.allProfile = pr.sort((a, b) => a.name.localeCompare(b.name, "de"));
   B.profile = B.allProfile.filter(p => p.aktiv !== false);
-  B.einst = ei.find(e => e.einstellung_id === "app") || null;
   B.units = new Map();
   for (const l of B.lektionen.values()){
     const subs = subsOf(l.lektion_id);
@@ -459,56 +484,41 @@ function zuDoc(pid, unit, ex, patch){
 /* ===== Kopfzeile ===== */
 function setWho(mode){
   const w = $("who");
-  if (mode === "child") w.innerHTML = `<span class="chip">${esc(C.profile.name)}</span><button class="link" id="btn-logout">Abmelden</button>`;
-  else if (mode === "parent") w.innerHTML = `<button class="link" id="btn-logout">Fertig</button>`;
+  if (mode === "child") w.innerHTML = `<span class="chip">${esc(C.profile.name)}</span><button class="link" id="btn-settings">Einstellungen</button>`;
+  else if (mode === "parent") w.innerHTML = `<span class="chip">Eltern</span>`;
   else w.innerHTML = "";
-  const b = $("btn-logout"); if (b) b.onclick = async () => { if (mode === "child"){ await finishRound(); C.pid = null; } goProfiles(); };
+  const b = $("btn-settings"); if (b) b.onclick = async () => { await finishRound(); goSettings(); };
 }
 
-/* ===== Profilwahl ===== */
-function goProfiles(){
-  setWho(null);
-  const list = $("profile-list");
-  list.innerHTML = B.profile.length ? "" : `<div class="panel empty" style="grid-column:1/-1">Noch keine Profile angelegt. Lege im Eltern-Bereich ein Kind an.</div>`;
-  B.profile.forEach(p => {
-    const b = document.createElement("button");
-    b.className = "prof";
-    b.innerHTML = `<span class="avatar">${esc(p.name[0] || "?")}</span>${esc(p.name)}<span class="hint">${p.pin_hash ? "PIN eingeben" : "PIN festlegen"}</span>`;
-    b.onclick = () => childLogin(p);
-    list.appendChild(b);
-  });
-  show("s-profiles");
-}
-
-/* ===== PIN-Eingabe ===== */
-const PIN = { buf: "", first: null, cfg: null, busy: false };
-function pinFlow(cfg){ PIN.cfg = cfg; PIN.buf = ""; PIN.first = null; PIN.busy = false; renderPin(); show("s-pin"); }
+/* ===== PIN-Eingabe (Schritte: z. B. alte PIN, neue PIN, neue PIN wiederholen) ===== */
+const PIN = { buf: "", vals: [], cfg: null, busy: false };
+function pinFlow(cfg){ PIN.cfg = cfg; PIN.buf = ""; PIN.vals = []; PIN.busy = false; renderPin(); show("s-pin"); }
 function renderPin(msg = ""){
-  const c = PIN.cfg, setting = !c.hash;
+  const c = PIN.cfg;
   $("pin-title").textContent = c.title;
-  $("pin-sub").textContent = setting ? (PIN.first ? "PIN zur Bestätigung noch einmal eingeben" : "Neue 4-stellige PIN festlegen") : "4-stellige PIN eingeben";
+  $("pin-sub").textContent = c.steps[Math.min(PIN.vals.length, c.steps.length - 1)];
   [...$("pin-dots").children].forEach((d, i) => d.classList.toggle("on", i < PIN.buf.length));
   $("pin-msg").textContent = msg;
 }
-function pinFail(msg){ const d = $("pin-dots"); d.classList.remove("shake"); void d.offsetWidth; d.classList.add("shake"); PIN.buf = ""; renderPin(msg); }
+function pinFail(msg){ const d = $("pin-dots"); d.classList.remove("shake"); void d.offsetWidth; d.classList.add("shake"); PIN.buf = ""; PIN.vals = []; renderPin(msg); }
 async function pinComplete(){
-  const c = PIN.cfg, pin = PIN.buf;
+  const c = PIN.cfg;
+  PIN.vals.push(PIN.buf); PIN.buf = "";
   try {
-    if (c.hash){
-      if ((await hashPin(c.salt, pin)) === c.hash || (String(c.hash).startsWith("djb2-") && djb2Hash(c.salt, pin) === c.hash)) return c.onOk();
-      return pinFail("Falsche PIN");
-    }
-    if (!PIN.first){ PIN.first = pin; PIN.buf = ""; return renderPin(); }
-    if (PIN.first !== pin){ PIN.first = null; return pinFail("PINs stimmen nicht überein. Bitte neu festlegen."); }
-    const h = await hashPin(c.salt, pin);
-    try { await c.onSet(h); toast("PIN gespeichert"); c.onOk(); }
-    catch { pinFail("PIN konnte nicht gespeichert werden. Internet prüfen."); }
-  } finally { PIN.busy = false; }
+    if (PIN.vals.length < c.steps.length) return renderPin();
+    const n = PIN.vals.length;
+    if (c.confirmLast && PIN.vals[n - 1] !== PIN.vals[n - 2]) return pinFail("Die PINs stimmen nicht überein. Bitte neu eingeben.");
+    [...$("pin-dots").children].forEach(d => d.classList.add("on"));
+    $("pin-sub").textContent = "Einen Moment …";
+    const err = await c.onDone(PIN.vals);
+    if (err) pinFail(err);
+  } catch (e) { console.error(e); pinFail("Das hat nicht geklappt. Bitte erneut versuchen."); }
+  finally { PIN.busy = false; }
 }
 function pinKey(k){
   if (PIN.busy) return;
   if (k === "back") { PIN.buf = PIN.buf.slice(0, -1); return renderPin(); }
-  if (k === "cancel") return goProfiles();
+  if (k === "cancel") return PIN.cfg.onCancel();
   if (PIN.buf.length >= 4) return;
   PIN.buf += k; renderPin();
   if (PIN.buf.length === 4){ PIN.busy = true; setTimeout(pinComplete, 120); }
@@ -528,30 +538,46 @@ function pinKey(k){
   });
 })();
 
-/* ===== Kind: Anmeldung und Daten ===== */
-const C = { pid: null, profile: null, units: [], zu: new Map(), vocab: [], prog: new Map(), book: null, lang: null, dir: pref.get("dir", "de-fs"), sel: "all" };
-function childLogin(p){
-  pinFlow({ title: "Hallo " + p.name, hash: p.pin_hash, salt: p.profil_id,
-    onSet: async h => { await Store.setChildPin(p.profil_id, h); p.pin_hash = h; },
-    onOk: () => loadChild(p) });
+/* ===== Kind: Daten ===== */
+const C = { pid: null, login: null, profile: null, raw: new Map(), myBooks: [], allVocab: [], units: [], zu: new Map(), vocab: [], prog: new Map(), book: null, lang: null, dir: pref.get("dir", "de-fs"), sel: "all" };
+async function startChild(who){
+  await loadBase();
+  const p = B.allProfile.find(x => x.profil_id === who.profil_id);
+  if (!p) return showError(null, "Dein Profil wurde nicht gefunden. Bitte frag deine Eltern.");
+  if (p.aktiv === false) return showError(null, "Dein Profil ist deaktiviert. Bitte frag deine Eltern.");
+  C.login = who.login; pref.set("login", who.login); pref.set("name:" + who.login, p.name);
+  return loadChild(p);
 }
 async function loadChild(p){
   show("s-loading");
   try {
-    await loadBase();
     C.pid = p.profil_id; C.profile = p; C.book = null; C.sel = "all";
     const [zl, bz] = await Promise.all([Store.assignmentsFor(p.profil_id), Store.bookAssignmentsFor(p.profil_id)]);
-    const raw = new Map(zl.map(z => [z.zuordnung_id, z]));
-    const myBooks = new Set(bz.map(b => b.buch_id));
-    C.zu = new Map(); C.units = [];
-    for (const u of B.units.values()){ if (!myBooks.has(u.buch_id)) continue; const z = zuOf(raw, p.profil_id, u); if (z){ C.zu.set(u.key, z); if (z.aktiv) C.units.push(u.key); } }
-    const active = new Set(C.units);
-    const lids = [...new Set(C.units.map(k => B.units.get(k).lektion_id))];
+    C.raw = new Map(zl.map(z => [z.zuordnung_id, z]));
+    C.myBooks = [...new Set(bz.map(b => b.buch_id))].filter(id => B.buecher.has(id));
+    const lids = [...B.lektionen.values()].filter(l => C.myBooks.includes(l.buch_id)).map(l => l.lektion_id);
     const [voc, prog] = await Promise.all([Store.vocabFor(lids), Store.progressFor(p.profil_id)]);
-    C.vocab = voc.filter(v => active.has(unitKeyOfVocab(v)));
+    C.allVocab = voc;
     C.prog = new Map(prog.map(x => [x.vokabel_id, x]));
+    recompute();
     setWho("child"); goBooks();
   } catch (e) { showError(e); }
+}
+/* Freischaltungen neu auswerten (nach dem Laden und nach jeder Änderung in den Einstellungen) */
+function recompute(){
+  C.zu = new Map(); C.units = [];
+  for (const u of B.units.values()){
+    if (!C.myBooks.includes(u.buch_id)) continue;
+    const z = zuOf(C.raw, C.pid, u);
+    if (z){ C.zu.set(u.key, z); if (z.aktiv) C.units.push(u.key); }
+  }
+  const active = new Set(C.units);
+  C.vocab = C.allVocab.filter(v => active.has(unitKeyOfVocab(v)));
+}
+function saveUnit(unit, patch){
+  const d = zuDoc(C.pid, unit, C.zu.get(unit.key), patch);
+  C.raw.set(d.zuordnung_id, d); recompute();
+  return Store.saveAssignment(d);
 }
 const stufe = vid => C.prog.get(vid)?.stufe ?? 0;
 const ziel = key => C.zu.get(key)?.ziel_stufe || DEFAULT_ZIEL;
@@ -562,13 +588,84 @@ const vocabOf = keys => { const s = new Set(keys); return C.vocab.filter(v => s.
 const countC = keys => { const voc = vocabOf(keys), c = { total: voc.length, n: [0,0,0] };
   voc.forEach(v => { const s = stufe(v.vokabel_id); c.n[s >= zielOfVocab(v) ? 2 : s > 0 ? 1 : 0]++; }); return c; };
 
+/* ===== Kind: Einstellungen ===== */
+function goSettings(){
+  $("set-login").textContent = "Benutzername: " + (C.login || C.pid) + ". Die App bleibt auf diesem Handy angemeldet.";
+  const host = $("set-books"); host.innerHTML = "";
+  const books = C.myBooks.map(id => B.buecher.get(id)).filter(Boolean).sort((a, b) => a.titel.localeCompare(b.titel, "de"));
+  if (!books.length) host.innerHTML = `<div class="panel empty">Dir ist noch kein Buch zugewiesen. Bitte deine Eltern darum.</div>`;
+  books.forEach(bk => host.appendChild(renderSetBook(bk)));
+  show("s-settings");
+}
+function renderSetBook(bk){
+  const units = sortUnits([...B.units.values()].filter(u => u.buch_id === bk.buch_id).map(u => u.key)).map(k => B.units.get(k));
+  const box = document.createElement("div"); box.className = "panel kid";
+  box.innerHTML = `<div class="book-head"><button class="fold" data-fold><span class="caret">▸</span><h2>${esc(bk.titel)} <span class="sub" style="font-weight:400;font-size:15px">· ${esc(B.sprachen.get(bk.sprache_id)?.name || "")}</span></h2></button>${units.length ? `<span style="display:flex;gap:6px;flex:none"><button class="mini" data-all="1">Alle an</button><button class="mini" data-all="0">Alle aus</button></span>` : ""}</div>`;
+  const body = document.createElement("div"); body.className = "book-body"; box.appendChild(body);
+  if (!units.length) body.insertAdjacentHTML("beforeend", `<div class="sub">In diesem Buch gibt es noch keine Lektionen.</div>`);
+  lessonsOfBook(bk.buch_id).forEach(l => {
+    const subs = subsOf(l.lektion_id);
+    if (!subs.length) return body.appendChild(setUnitRow(B.units.get(l.lektion_id), false));
+    const lu = subs.map(u => B.units.get(u.unterlektion_id)), on = lu.filter(u => C.zu.get(u.key)?.aktiv).length;
+    const gh = document.createElement("button"); gh.className = "lesson-group fold";
+    gh.innerHTML = `<span class="caret">▸</span>${esc(l.name)} <span class="sub" style="font-weight:400">· ${on}/${lu.length} an</span>`;
+    const gb = document.createElement("div"); gb.className = "lesson-body";
+    lu.forEach(u => gb.appendChild(setUnitRow(u, true)));
+    body.appendChild(gh); body.appendChild(gb);
+    fold("s:" + l.lektion_id, gh, gb);
+  });
+  if (!OPEN.has("sb:" + bk.buch_id + ":init")){ OPEN.add("sb:" + bk.buch_id + ":init"); OPEN.add("sb:" + bk.buch_id); }
+  fold("sb:" + bk.buch_id, box.querySelector("[data-fold]"), body);
+  box.querySelectorAll("[data-all]").forEach(b => b.onclick = () => {
+    const val = b.dataset.all === "1";
+    units.forEach(u => { if (!!C.zu.get(u.key)?.aktiv !== val) saveUnit(u, { aktiv: val }); });
+    toast(val ? "Alle Lektionen an" : "Alle Lektionen aus"); goSettings();
+  });
+  return box;
+}
+function setUnitRow(unit, indent){
+  const z = C.zu.get(unit.key), on = !!z?.aktiv, zs = z?.ziel_stufe || null, zz = zs || DEFAULT_ZIEL;
+  const voc = C.allVocab.filter(v => unitKeyOfVocab(v) === unit.key);
+  const c = countFor(voc, C.prog, () => zz);
+  const wrap = document.createElement("div"); wrap.className = "setrow" + (indent ? " indent" : "");
+  if (indent) wrap.style.marginLeft = "20px";
+  wrap.innerHTML = `<label class="switch"><input type="checkbox" ${on ? "checked" : ""} aria-label="${esc(unit.full)} lernen"><span></span></label>
+    <div class="nm"><span>${esc(unit.name)}<small style="display:block">${plural(voc.length, "Vokabel", "Vokabeln")} · ${c.n[2]} gelernt</small></span>${stageBar(c)}</div>
+    <select class="mini" aria-label="Ziel für ${esc(unit.full)}">${zs ? "" : `<option value="" selected>Ziel ?</option>`}${[1,2,3,4,5].map(n => `<option value="${n}" ${n === zs ? "selected" : ""}>${n}×</option>`).join("")}</select>`;
+  wrap.querySelector("input").onchange = e => { saveUnit(unit, { aktiv: e.target.checked }); toast(unit.full + (e.target.checked ? " an" : " aus")); goSettings(); };
+  wrap.querySelector("select").onchange = e => { if (!e.target.value) return; saveUnit(unit, { ziel_stufe: +e.target.value }); toast("Ziel für " + unit.full + ": " + e.target.value + "×"); goSettings(); };
+  return wrap;
+}
+$("btn-settings-back").onclick = goBooks;
+$("btn-pin-change").onclick = () => pinFlow({
+  title: "PIN ändern", steps: ["Alte PIN eingeben", "Neue PIN eingeben", "Neue PIN noch einmal"], confirmLast: true,
+  onCancel: goSettings,
+  onDone: async ([oldPin, newPin]) => {
+    if (!navigator.onLine) return "Zum Ändern der PIN wird Internet gebraucht.";
+    const u = Auth.currentUser;
+    try { await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, kidPw(oldPin))); }
+    catch (e) { return authMsg(e, "Die alte PIN stimmt nicht."); }
+    try { await u.updatePassword(kidPw(newPin)); } catch (e) { return authMsg(e, "Die PIN konnte nicht geändert werden."); }
+    toast("Neue PIN gespeichert"); goSettings(); return null;
+  }
+});
+$("btn-kid-signout").onclick = async () => {
+  if (pending > 0) return toast("Es gibt noch nicht abgeglichene Übungen. Bitte erst online gehen.");
+  if (!confirm("Wirklich abmelden? Zum erneuten Anmelden brauchst du deine PIN und Internet.")) return;
+  try { await Auth.signOut(); } catch {}
+  location.replace(appUrl() + "?u=" + encodeURIComponent(C.login || ""));
+};
+
 /* ===== Schritt 1: Buch ===== */
 function goBooks(){
   $("books-hello").textContent = "Hallo " + C.profile.name + "!";
   const books = [...new Set(C.units.map(k => B.units.get(k).buch_id))].map(id => B.buecher.get(id)).filter(Boolean).sort((a, b) => a.titel.localeCompare(b.titel, "de"));
   const list = $("book-list"); list.innerHTML = "";
   if (!books.length){
-    list.innerHTML = `<div class="panel empty">Für dich sind noch keine Lektionen freigeschaltet. Bitte deine Eltern, im Eltern-Bereich Lektionen zu aktivieren.</div>`;
+    list.innerHTML = C.myBooks.length
+      ? `<div class="panel empty">Du hast noch keine Lektion eingeschaltet.</div><button class="btn primary" id="btn-go-settings">Lektionen auswählen</button>`
+      : `<div class="panel empty">Dir ist noch kein Buch zugewiesen. Bitte deine Eltern darum.</div>`;
+    const g = $("btn-go-settings"); if (g) g.onclick = goSettings;
     return show("s-books");
   }
   books.forEach(bk => {
@@ -643,7 +740,7 @@ $("goal-opts").addEventListener("click", e => { const z = e.target.closest("[dat
 $("btn-goal").onclick = async () => {
   const btn = $("btn-goal"); btn.disabled = true;
   try {
-    for (const k of G.keys){ const d = zuDoc(C.pid, B.units.get(k), C.zu.get(k), { ziel_stufe: G.val }); await Store.saveAssignment(d); C.zu.set(k, d); }
+    for (const k of G.keys) await saveUnit(B.units.get(k), { ziel_stufe: G.val });
     startRound();
   } catch { toast("Ziel nicht gespeichert. Internet prüfen."); }
   finally { btn.disabled = false; }
@@ -742,9 +839,6 @@ $("btn-stop").onclick = () => R.hist.length ? roundDone() : (R.active = false, g
 
 /* ===== Eltern-Bereich ===== */
 const P = { vocab: [], prog: new Map(), zu: new Map(), open: new Set(), sort: new Map(), sess: new Map(), edit: null };
-$("btn-parent").onclick = () => pinFlow({ title: "Eltern-Bereich", hash: B.einst?.eltern_pin_hash || null, salt: "eltern",
-  onSet: async h => { await Store.setParentPin(h); B.einst = { ...(B.einst || {}), eltern_pin_hash: h }; },
-  onOk: loadParent });
 async function loadParent(){
   show("s-loading");
   try {
@@ -764,14 +858,7 @@ function renderParent(){
   if (!B.profile.length) host.innerHTML = `<div class="panel empty">Noch keine aktiven Profile. Lege unten ein Kind an.</div>`;
   B.profile.forEach(p => {
     const box = document.createElement("div"); box.className = "panel kid";
-    box.innerHTML = `<div class="kid-head"><button class="fold" data-fold><span class="caret">▸</span><h2>${esc(p.name)}</h2></button><div class="kid-actions"><button class="mini" data-act="reset">PIN zurücksetzen</button><button class="mini" data-act="off">Deaktivieren</button></div></div>`;
-    const resetBtn = box.querySelector('[data-act="reset"]');
-    if (!p.pin_hash){ resetBtn.disabled = true; resetBtn.textContent = "Noch keine PIN"; }
-    resetBtn.onclick = async () => {
-      if (!resetBtn.classList.contains("warn")){ resetBtn.classList.add("warn"); resetBtn.textContent = "Wirklich zurücksetzen?"; return; }
-      try { await Store.setChildPin(p.profil_id, null); p.pin_hash = null; toast("PIN von " + p.name + " zurückgesetzt"); renderParent(); }
-      catch { toast("Zurücksetzen fehlgeschlagen"); }
-    };
+    box.innerHTML = `<div class="kid-head"><button class="fold" data-fold><span class="caret">▸</span><h2>${esc(p.name)}</h2></button><div class="kid-actions">${p.uid ? "" : `<span class="pill pf">kein Konto</span>`}<button class="mini" data-act="off">Deaktivieren</button></div></div>`;
     const offBtn = box.querySelector('[data-act="off"]');
     offBtn.onclick = async () => {
       if (!offBtn.classList.contains("warn")){ offBtn.classList.add("warn"); offBtn.textContent = "Wirklich deaktivieren?"; return; }
@@ -781,6 +868,7 @@ function renderParent(){
     const mine = books.filter(bk => P.bz.has(p.profil_id + "_" + bk.buch_id)), rest = books.filter(bk => !mine.includes(bk));
     const kidHead = box.querySelector(".kid-head"), kb = document.createElement("div"); kb.className = "kid-body"; box.appendChild(kb);
     const boxMain = box; { const box = kb;
+    box.appendChild(renderAccount(p));
     if (!mine.length) box.insertAdjacentHTML("beforeend", `<div class="sub">Noch kein Buch zugewiesen.</div>`);
     mine.forEach(bk => {
       const sec = renderBook(p, bk);
@@ -798,7 +886,7 @@ function renderParent(){
       row.innerHTML = `<select class="mini" aria-label="Buch für ${esc(p.name)} wählen">${rest.map(bk => `<option value="${esc(bk.buch_id)}">${esc(bk.titel)}</option>`).join("")}</select><button class="mini">Buch zuweisen</button>`;
       row.querySelector("button").onclick = async () => {
         const bid = row.querySelector("select").value, id = p.profil_id + "_" + bid;
-        try { await Store.assignBook({ buch_zuordnung_id: id, profil_id: p.profil_id, buch_id: bid, zugewiesen_am: now() }); P.bz.add(id); toast("Buch zugewiesen. Jetzt Lektionen freischalten."); renderParent(); }
+        try { await Store.assignBook({ buch_zuordnung_id: id, profil_id: p.profil_id, buch_id: bid, zugewiesen_am: now() }); P.bz.add(id); toast("Buch zugewiesen. Lektionen schaltet " + p.name + " in den Einstellungen frei."); renderParent(); }
         catch { toast("Zuweisen fehlgeschlagen"); }
       };
       box.appendChild(row);
@@ -820,7 +908,7 @@ function renderBook(p, bk){
   const lessons = lessonsOfBook(bk.buch_id);
   const units = sortUnits([...B.units.values()].filter(u => u.buch_id === bk.buch_id).map(u => u.key)).map(k => B.units.get(k));
   const sec = document.createElement("div"); sec.className = "book";
-  sec.innerHTML = `<div class="book-head"><button class="fold" data-fold><span class="caret">▸</span><b>${esc(bk.titel)} <span class="sub" style="font-weight:400">· ${esc(B.sprachen.get(bk.sprache_id)?.name || "")}</span></b></button>${units.length ? `<span style="display:flex;gap:6px;flex:none"><button class="mini" data-all="1">Alle an</button><button class="mini" data-all="0">Alle aus</button></span>` : ""}</div>`;
+  sec.innerHTML = `<div class="book-head"><button class="fold" data-fold><span class="caret">▸</span><b>${esc(bk.titel)} <span class="sub" style="font-weight:400">· ${esc(B.sprachen.get(bk.sprache_id)?.name || "")}</span></b></button></div>`;
   const bb = document.createElement("div"); bb.className = "book-body"; sec.appendChild(bb);
   if (!lessons.length) bb.insertAdjacentHTML("beforeend", `<div class="sub">Noch keine Lektionen. Sie entstehen beim ersten Scan.</div>`);
   lessons.forEach(l => {
@@ -835,11 +923,6 @@ function renderBook(p, bk){
     fold("l:" + p.profil_id + ":" + l.lektion_id, gh, gb);
   });
   fold("b:" + p.profil_id + ":" + bk.buch_id, sec.querySelector("[data-fold]"), bb);
-  sec.querySelectorAll("[data-all]").forEach(b => b.onclick = async () => {
-    const val = b.dataset.all === "1"; b.disabled = true;
-    for (const u of units){ if (!!zuOf(P.zu, p.profil_id, u)?.aktiv !== val) await setAssign(p, u, val, null, true); }
-    renderParent(); toast(val ? "Alle Lektionen aktiviert" : "Alle Lektionen deaktiviert");
-  });
   return sec;
 }
 function renderUnitRow(p, unit, indent){
@@ -848,13 +931,11 @@ function renderUnitRow(p, unit, indent){
   const voc = P.vocab.filter(v => unitKeyOfVocab(v) === unit.key);
   const c = countFor(voc, prog, () => z), isOpen = P.open.has(zid);
   const wrap = document.createElement("div"); wrap.className = "lrow-wrap" + (indent ? " indent" : "");
-  wrap.innerHTML = `<div class="lrow"><label class="switch"><input type="checkbox" id="sw-${esc(zid)}" ${on ? "checked" : ""} aria-label="${esc(unit.full)} für ${esc(p.name)} aktiv"><span></span></label>
+  wrap.innerHTML = `<div class="lrow"><span class="pill ${on ? "p2" : "p0"}" style="min-width:34px;text-align:center" title="${on ? "vom Kind eingeschaltet" : "ausgeschaltet"}">${on ? "an" : "aus"}</span>
     <button class="expand lesson" aria-expanded="${isOpen}" aria-controls="dt-${esc(zid)}"><div class="lesson-top"><span>${esc(unit.name)} <span class="caret">›</span><small>${zcur ? "Ziel " + zcur + "×" : "Ziel noch offen"}</small></span><span class="n">${c.n[2]} / ${c.total} gelernt</span></div>${stageBar(c)}</button></div>
     <div class="detail" id="dt-${esc(zid)}" ${isOpen ? "" : "hidden"}>
-      <div class="detail-head"><span class="label">Lernziel</span><select class="mini" id="zs-${esc(zid)}" aria-label="Ziel für ${esc(unit.full)}">${zcur ? "" : `<option value="" selected>Ziel offen</option>`}${[1,2,3,4,5].map(n => `<option value="${n}" ${n === zcur ? "selected" : ""}>${n}× gewusst</option>`).join("")}</select></div>
+      <div class="detail-head"><span class="label">Lernziel</span><span class="sub">${zcur ? zcur + "× gewusst" : "noch offen"} · legt ${esc(p.name)} fest</span></div>
       <div data-body></div></div>`;
-  wrap.querySelector("input").onchange = e => setAssign(p, unit, e.target.checked, e.target);
-  wrap.querySelector("select").onchange = e => setGoal(p, unit, +e.target.value);
   const detail = wrap.querySelector(".detail"), body = wrap.querySelector("[data-body]");
   wrap.querySelector(".expand").onclick = () => {
     if (P.open.has(zid)) P.open.delete(zid); else P.open.add(zid);
@@ -956,27 +1037,78 @@ function renderInactive(){
     host.appendChild(row);
   });
 }
+/* ===== Konten der Kinder (ohne Server: Anlage über eine zweite, nicht gespeicherte Firebase-Sitzung) ===== */
+async function createAccount(email, pw){
+  const app2 = firebase.initializeApp(window.FIREBASE_CONFIG, "anlage-" + Date.now());
+  try {
+    const a = app2.auth();
+    await a.setPersistence(firebase.auth.Auth.Persistence.NONE);
+    const cr = await withTimeout(a.createUserWithEmailAndPassword(email, pw));
+    const uid = cr.user.uid;
+    try { await a.signOut(); } catch {}
+    return uid;
+  } finally { try { await app2.delete(); } catch {} }
+}
+/* Legt ein neues Konto an und verknüpft es mit dem Profil. Ein altes Konto verliert dabei sofort den Zugang (PIN vergessen, Handy verloren). */
+async function setupKidAccount(p, pin){
+  if (!navigator.onLine) throw Object.assign(new Error("offline"), { code: "offline" });
+  const login = p.profil_id, t = now();
+  const email = login + "." + Date.now().toString(36) + "@" + window.FIREBASE_CONFIG.authDomain;
+  const uid = await createAccount(email, kidPw(pin));
+  await Store.live("benutzer", uid, { uid, rolle: "kind", profil_id: p.profil_id, login, email, erstellt_am: t });
+  await Store.live("logins", login, { login, email, profil_id: p.profil_id, geaendert_am: t });
+  await Store.live("profile", p.profil_id, { uid }, true);
+  if (p.uid && p.uid !== uid) await Store.live("benutzer", p.uid, null).catch(e => console.warn(e));
+  p.uid = uid;
+}
+const accMsg = e => e?.code === "offline" ? "Dafür wird Internet gebraucht." : e?.code === "auth/operation-not-allowed" ? "In Firebase ist die Anmeldung mit E-Mail/Passwort nicht aktiviert." : e?.code === "permission-denied" ? "Keine Berechtigung. Sind die neuen Firestore-Regeln eingespielt?" : "Das hat nicht geklappt (" + (e?.code || "Fehler") + "). Bitte erneut versuchen.";
+function renderAccount(p){
+  const el = document.createElement("div"); el.className = "acct";
+  if (p.uid){
+    el.innerHTML = `<div class="label">Anmeldung</div>
+      <div class="sub" style="font-size:14px">Link für das Handy von ${esc(p.name)} (einmal öffnen, PIN eingeben):</div>
+      <div class="url">${esc(linkFor(p.profil_id))}</div>
+      <div class="inl"><button class="mini" data-copy>Link kopieren</button></div>
+      <form class="inl" data-pin><input type="password" inputmode="numeric" maxlength="4" placeholder="Neue PIN" autocomplete="new-password" aria-label="Neue PIN für ${esc(p.name)}"><button class="mini" type="submit">Neue PIN vergeben</button></form>
+      <div class="sub" style="font-size:13px">Nur nötig, wenn die PIN vergessen wurde oder ein Handy verloren ging. Danach muss sich ${esc(p.name)} auf jedem Handy neu anmelden.</div>`;
+    el.querySelector("[data-copy]").onclick = () => copyText(linkFor(p.profil_id));
+  } else {
+    el.innerHTML = `<div class="label">Anmeldung</div>
+      <div class="sub" style="font-size:14px">${esc(p.name)} hat noch kein eigenes Konto.</div>
+      <form class="inl" data-pin><input type="password" inputmode="numeric" maxlength="4" placeholder="Start-PIN (4 Ziffern)" autocomplete="new-password" aria-label="Start-PIN für ${esc(p.name)}"><button class="mini" type="submit">Konto einrichten</button></form>`;
+  }
+  const f = el.querySelector("[data-pin]");
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const inp = f.querySelector("input"), btn = f.querySelector("button"), pin = inp.value.trim();
+    if (!isPin(pin)) return toast("Bitte genau 4 Ziffern eingeben");
+    if (p.uid && !btn.classList.contains("warn")){ btn.classList.add("warn"); btn.textContent = "Wirklich? Alte PIN wird ungültig"; return; }
+    btn.disabled = true; btn.textContent = "Einen Moment …";
+    try { await setupKidAccount(p, pin); toast(p.uid ? "Konto bereit. PIN: " + pin : "Fertig"); renderParent(); }
+    catch (err) { console.error(err); toast(accMsg(err)); btn.disabled = false; btn.classList.remove("warn"); btn.textContent = p.uid ? "Neue PIN vergeben" : "Konto einrichten"; }
+  };
+  return el;
+}
 $("form-kid").addEventListener("submit", async e => {
   e.preventDefault();
-  const name = $("kid-name").value.trim().replace(/\s+/g, " ");
+  const name = $("kid-name").value.trim().replace(/\s+/g, " "), pin = $("kid-pin").value.trim();
   if (!name) return toast("Bitte einen Namen eingeben");
+  if (!isPin(pin)) return toast("Bitte eine Start-PIN mit genau 4 Ziffern eingeben");
   if (B.allProfile.some(p => p.name.toLowerCase() === name.toLowerCase())) return toast("Diesen Namen gibt es schon");
-  let id = slug(name), n = 2; while (B.allProfile.some(p => p.profil_id === id)) id = slug(name) + "-" + n++;
-  const d = { profil_id: id, name, pin_hash: null, aktiv: true, erstellt_am: now() };
-  try { await Store.addProfile(d); B.allProfile.push(d); B.allProfile.sort((a, b) => a.name.localeCompare(b.name, "de")); B.profile = B.allProfile.filter(x => x.aktiv !== false); P.prog.set(id, new Map()); $("kid-name").value = ""; renderParent(); toast(name + " angelegt. Jetzt Lektionen freischalten."); }
-  catch { toast("Anlegen fehlgeschlagen. Internet prüfen."); }
+  if (!navigator.onLine) return toast("Zum Anlegen wird Internet gebraucht");
+  let id = slug(name), n = 2; while (id === "eltern" || B.allProfile.some(p => p.profil_id === id)) id = slug(name) + "-" + n++;
+  const d = { profil_id: id, name, aktiv: true, erstellt_am: now() };
+  const btn = e.submitter || $("form-kid").querySelector("button"); btn.disabled = true;
+  try {
+    await Store.live("profile", id, d);
+    B.allProfile.push(d); B.allProfile.sort((a, b) => a.name.localeCompare(b.name, "de")); B.profile = B.allProfile.filter(x => x.aktiv !== false); P.prog.set(id, new Map());
+    $("kid-name").value = ""; $("kid-pin").value = "";
+    try { await setupKidAccount(d, pin); OPEN.add("k:" + id); toast(name + " angelegt. Jetzt ein Buch zuweisen und den Link aufs Handy schicken."); }
+    catch (err) { console.error(err); toast("Profil angelegt, Konto noch nicht: " + accMsg(err)); }
+    renderParent();
+  } catch (err) { console.error(err); toast(accMsg(err)); }
+  finally { btn.disabled = false; }
 });
-async function setAssign(p, unit, on, input, quiet){
-  const d = zuDoc(p.profil_id, unit, zuOf(P.zu, p.profil_id, unit), { aktiv: on });
-  try { await Store.saveAssignment(d); P.zu.set(d.zuordnung_id, d); if (!quiet) toast(unit.full + (on ? " aktiviert" : " deaktiviert")); }
-  catch { if (input) input.checked = !on; toast("Änderung nicht gespeichert"); }
-}
-async function setGoal(p, unit, val){
-  const d = zuDoc(p.profil_id, unit, zuOf(P.zu, p.profil_id, unit), { ziel_stufe: val });
-  try { await Store.saveAssignment(d); P.zu.set(d.zuordnung_id, d); toast("Ziel für " + unit.full + ": " + val + "×"); }
-  catch { toast("Ziel nicht gespeichert"); }
-  renderParent();
-}
 /* ===== Dateien speichern (normaler Browser-Download) ===== */
 function saveFile(name, text, mime){
   const url = URL.createObjectURL(new Blob([text], { type: mime + ";charset=utf-8" }));
@@ -1099,27 +1231,82 @@ $("file-import").onchange = async e => {
   try { IMP = { obj, over: false, plan: await planImport(obj, false) }; renderImport(); }
   catch (err) { console.error(err); toast("Import konnte nicht vorbereitet werden"); }
 };
+$("btn-parent-link").onclick = () => copyText(linkFor("eltern"));
 $("btn-signout").onclick = async () => {
   if (pending > 0) return toast("Es gibt noch nicht abgeglichene Änderungen. Bitte erst online gehen.");
-  if (!confirm("Dieses Gerät vom Familien-Konto abmelden? Zum erneuten Anmelden wird Internet gebraucht.")) return;
+  if (!confirm("Dieses Gerät abmelden? Zum erneuten Anmelden wird Internet gebraucht.")) return;
   try { await Auth.signOut(); } catch {}
-  location.reload();
+  location.replace(linkFor("eltern"));
 };
 
-/* ===== Anmeldung (Familien-Konto) und Start ===== */
+/* ===== Anmeldung und Start ===== */
 let Auth = null;
 function showError(e, text){ if (e) console.error(e); $("err-text").textContent = text || "Die Daten konnten nicht geladen werden. Bitte Internet prüfen und erneut versuchen."; setWho(null); show("s-error"); }
 $("btn-retry").onclick = boot;
-function goLogin(){ setWho(null); $("login-msg").textContent = navigator.onLine ? "" : "Zum ersten Anmelden wird Internet gebraucht."; show("s-login"); }
+function authMsg(e, wrong){
+  const c = e?.code || "";
+  if (c === "auth/network-request-failed") return "Keine Verbindung. Bitte Internet prüfen.";
+  if (c.includes("too-many")) return "Zu viele Versuche. Bitte später noch einmal probieren.";
+  return wrong;
+}
+/* u = "eltern", ein Benutzername oder leer (Auswahl) */
+function goLogin(u = "", msg = ""){
+  setWho(null);
+  if (u && u !== "eltern") return kidPinLogin(u, msg);
+  $("login-kid").hidden = u === "eltern";
+  $("login-msg").textContent = msg || (navigator.onLine ? "" : "Zum Anmelden wird Internet gebraucht.");
+  show("s-login");
+}
+function kidPinLogin(login, msg = ""){
+  const name = pref.get("name:" + login, login.charAt(0).toUpperCase() + login.slice(1));
+  pinFlow({ title: "Hallo " + name + "!", steps: ["Gib deine 4-stellige PIN ein"], onCancel: () => goLogin("", ""), onDone: v => kidLogin(login, v[0]) });
+  if (msg) renderPin(msg);
+}
+async function kidLogin(login, pin){
+  if (!navigator.onLine) return "Zum Anmelden wird Internet gebraucht.";
+  let email = null;
+  try { const d = await withTimeout(Store.db.collection("logins").doc(login).get({ source: "server" })); email = d.exists ? d.data().email : null; }
+  catch (e) { console.error(e); return "Keine Verbindung zur Datenbank. Bitte erneut versuchen."; }
+  if (!email) return "Den Benutzer „" + login + "“ gibt es nicht.";
+  try { await Auth.signInWithEmailAndPassword(email, kidPw(pin)); }
+  catch (e) { return authMsg(e, "Falsche PIN"); }
+  pref.set("login", login); boot(); return null;
+}
+$("form-kid-login").addEventListener("submit", e => {
+  e.preventDefault();
+  const login = $("login-name").value.trim().toLowerCase();
+  if (login === "eltern") return goLogin("eltern");
+  if (login) kidPinLogin(login);
+});
 $("form-login").addEventListener("submit", async e => {
   e.preventDefault();
   $("login-msg").textContent = "";
-  try { await Auth.signInWithEmailAndPassword($("login-mail").value.trim(), $("login-pw").value); $("login-pw").value = ""; boot(); }
-  catch (err) {
-    const c = err.code || "";
-    $("login-msg").textContent = c === "auth/network-request-failed" ? "Keine Verbindung. Bitte Internet prüfen." : c.includes("too-many") ? "Zu viele Versuche. Bitte kurz warten." : "E-Mail oder Passwort stimmt nicht.";
-  }
+  try { await Auth.signInWithEmailAndPassword($("login-mail").value.trim(), $("login-pw").value); $("login-pw").value = ""; pref.set("login", "eltern"); boot(); }
+  catch (err) { $("login-msg").textContent = authMsg(err, "E-Mail oder Passwort stimmt nicht."); }
 });
+$("btn-forgot").onclick = async () => {
+  const mail = $("login-mail").value.trim();
+  if (!mail) return $("login-msg").textContent = "Bitte zuerst die E-Mail-Adresse eintragen.";
+  try { await Auth.sendPasswordResetEmail(mail); $("login-msg").textContent = ""; toast("Falls die Adresse stimmt, kommt gleich eine E-Mail zum Zurücksetzen."); }
+  catch (err) { $("login-msg").textContent = authMsg(err, "Das hat nicht geklappt. Bitte die Adresse prüfen."); }
+};
+/* Wer ist angemeldet? benutzer/{uid}. Fehlt der Eintrag, versucht das Konto, sich als Eltern-Konto einzutragen (erlauben die Regeln nur der Eltern-Adresse). */
+async function whoAmI(user){
+  const ref = Store.db.collection("benutzer").doc(user.uid);
+  const cached = () => { try { const c = JSON.parse(pref.get("who", "null")); return c && c.uid === user.uid ? c : null; } catch { return null; } };
+  const keep = w => { pref.set("who", JSON.stringify({ ...w, uid: user.uid })); return w; };
+  try {
+    const s = await Store.snap(ref);
+    if (s.exists) return keep(s.data());
+  } catch (e) {
+    if (e?.code === "permission-denied") return null;
+    const c = cached(); if (c) return c;
+    if (!navigator.onLine) throw e;
+  }
+  if (!navigator.onLine) return cached();
+  try { const w = { uid: user.uid, rolle: "eltern", email: user.email || "", erstellt_am: now() }; await Store.live("benutzer", user.uid, w); return keep(w); }
+  catch (e) { console.warn(e); return null; }
+}
 async function boot(){
   show("s-loading");
   try {
@@ -1130,16 +1317,27 @@ async function boot(){
       firebase.initializeApp(cfg);
       const db = firebase.firestore();
       db.enablePersistence({ synchronizeTabs: true }).catch(e => { if (e.code === "unimplemented" || e.code === "failed-precondition") toast("Der Offline-Speicher steht in diesem Browser nicht zur Verfügung."); });
-      Store.db = db; Auth = firebase.auth();
+      Store.db = db; Auth = firebase.auth(); Auth.languageCode = "de";
     }
+    const urlU = (new URLSearchParams(location.search).get("u") || "").trim().toLowerCase();
     const user = await new Promise(res => { const off = Auth.onAuthStateChanged(u => { off(); res(u); }); });
-    if (!user) return goLogin();
+    if (!user) return goLogin(urlU || pref.get("login", ""));
+    const who = await whoAmI(user);
+    if (!who){ try { await Auth.signOut(); } catch {} return goLogin(urlU, "Dieses Konto hat keinen Zugang (mehr). Bitte neu anmelden."); }
+    const mine = who.rolle === "eltern" ? "eltern" : who.login;
+    if (urlU && urlU !== mine){ try { await Auth.signOut(); } catch {} return goLogin(urlU); }
     try { navigator.storage?.persist?.(); } catch {}
-    await loadBase();
-    goProfiles();
+    if (who.rolle === "eltern"){ pref.set("login", "eltern"); return loadParent(); }
+    if (who.rolle === "kind") return startChild(who);
+    showError(null, "Unbekannte Benutzerrolle.");
   } catch (e) { showError(e); }
 }
-if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(e => console.warn("Service Worker:", e)));
+$("parent-link").textContent = linkFor("eltern");
+if ("serviceWorker" in navigator){
+  const hadCtrl = !!navigator.serviceWorker.controller; let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadCtrl && !reloaded && !R.active){ reloaded = true; location.reload(); } });
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(e => console.warn("Service Worker:", e)));
+}
 netState();
 boot();
 </script>

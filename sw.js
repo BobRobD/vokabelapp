@@ -1,6 +1,6 @@
 // Service Worker: legt die App-Dateien im Cache ab, damit die App ohne Internet startet.
 // Bei jeder neuen App-Version die Nummer hier erhöhen, sonst bleibt die alte Version im Cache.
-const VERSION = "3";
+const VERSION = "4";
 const CACHE = "vokabelapp-" + VERSION;
 const LOCAL = ["./", "index.html", "firebase-config.js", "manifest.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";

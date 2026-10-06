@@ -142,9 +142,18 @@ select.mini{appearance:auto;background:var(--surface);color:var(--fg)}
 
 /* v4 additions */
 .back{align-self:flex-start;background:none;border:0;color:var(--accent);font-weight:700;padding:4px 0;font-size:15px}
-.books{display:flex;flex-direction:column;gap:10px}
-.book-btn{display:flex;flex-direction:column;gap:10px;padding:16px}
-.book-btn .t{font-family:var(--f-display);font-size:19px}
+.books{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.books>.panel,.books>.btn{grid-column:1/-1}
+.book-btn{display:flex;flex-direction:column;gap:8px;padding:10px;text-align:left}
+.book-btn .t{font-family:var(--f-display);font-size:17px;line-height:1.2;overflow-wrap:anywhere}
+.book-btn small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.cover{width:100%;aspect-ratio:3/4;border-radius:8px;overflow:hidden;background:var(--accent-soft);display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cover img{width:100%;height:100%;object-fit:cover;display:block}
+.cover span{font-family:var(--f-display);font-size:44px;font-weight:700;color:var(--accent)}
+.cover-row{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.cover-row .cover{width:48px}
+.cover-row .cover span{font-size:20px}
+.cover-row .act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .lrow-wrap{display:flex;flex-direction:column;gap:10px}
 .expand{background:none;border:0;padding:0;text-align:left;width:100%;display:block}
 .expand .caret{display:inline-block;transition:transform .15s;color:var(--muted);margin-left:4px}
@@ -313,6 +322,12 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
       <form id="form-kid"><input id="kid-name" type="text" maxlength="30" placeholder="Vorname" autocomplete="off" aria-label="Vorname des Kindes"><input id="kid-pin" type="password" inputmode="numeric" maxlength="4" placeholder="Start-PIN (4 Ziffern)" autocomplete="new-password" aria-label="Start-PIN"><button class="btn primary" type="submit">Anlegen</button></form>
       <p class="sub" style="font-size:14px">Legt Profil und Konto an. Danach den Link des Kindes auf seinem Handy öffnen und einmal die PIN eingeben. Die PIN kann das Kind selbst ändern.</p>
       <div id="inactive-list"></div>
+    </div>
+    <div class="panel addkid">
+      <h2 style="margin:0">Buchcover</h2>
+      <p class="sub" style="font-size:14px">Foto vom Cover machen oder ein Bild wählen. Die App verkleinert es automatisch. Es erscheint auf der Startseite der Kinder.</p>
+      <div id="cover-list"></div>
+      <input type="file" id="file-cover" accept="image/*" hidden>
     </div>
     <div class="panel addkid">
       <h2 style="margin:0">Daten</h2>
@@ -675,13 +690,57 @@ function goBooks(){
     const nl = new Set(keys.map(k => B.units.get(k).lektion_id)).size;
     const b = document.createElement("button");
     b.className = "opt book-btn";
-    b.innerHTML = `<div class="lesson-top"><span class="t">${esc(bk.titel)}<small>${esc(B.sprachen.get(bk.sprache_id)?.name || "")} · ${plural(nl, "Lektion", "Lektionen")}</small></span><span class="n">${c.total - c.n[2]} offen · ${c.n[2]} gelernt</span></div>${stageBar(c)}`;
+    b.innerHTML = `${coverHtml(bk)}<span class="t">${esc(bk.titel)}<small>${esc(B.sprachen.get(bk.sprache_id)?.name || "")} · ${plural(nl, "Lektion", "Lektionen")}</small><small>${c.total - c.n[2]} offen · ${c.n[2]} gelernt</small></span>${stageBar(c)}`;
     b.onclick = () => { C.book = bk.buch_id; C.sel = "all"; goSetup(); };
     list.appendChild(b);
   });
   show("s-books");
 }
 $("btn-books").onclick = goBooks;
+/* Buchcover: als kleines JPEG direkt im Buch-Datensatz (kostenlos, auch offline sichtbar) */
+const coverHtml = bk => `<div class="cover">${bk.cover ? `<img src="${esc(bk.cover)}" alt="">` : `<span aria-hidden="true">${esc((bk.titel || "?").trim()[0] || "?")}</span>`}</div>`;
+function shrinkImage(file, maxW = 300, maxH = 420){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight);
+      const cv = document.createElement("canvas");
+      cv.width = Math.max(1, Math.round(img.naturalWidth * k)); cv.height = Math.max(1, Math.round(img.naturalHeight * k));
+      const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url); res(cv.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("bild")); };
+    img.src = url;
+  });
+}
+let coverFor = null;
+function renderCovers(){
+  const host = $("cover-list"); host.innerHTML = "";
+  const books = [...B.buecher.values()].sort((a, b) => a.titel.localeCompare(b.titel, "de"));
+  if (!books.length) host.innerHTML = `<div class="sub">Noch keine Bücher.</div>`;
+  books.forEach(bk => {
+    const row = document.createElement("div"); row.className = "cover-row";
+    row.innerHTML = `${coverHtml(bk)}<b style="min-width:0;overflow-wrap:anywhere">${esc(bk.titel)}</b><div class="act"><button class="mini" data-pick>${bk.cover ? "Ändern" : "Cover wählen"}</button>${bk.cover ? `<button class="mini" data-rm>Entfernen</button>` : ""}</div>`;
+    row.querySelector("[data-pick]").onclick = () => { coverFor = bk.buch_id; $("file-cover").click(); };
+    const rm = row.querySelector("[data-rm]");
+    if (rm) rm.onclick = async () => {
+      if (!rm.classList.contains("warn")){ rm.classList.add("warn"); rm.textContent = "Wirklich?"; return; }
+      try { await Store.live("buecher", bk.buch_id, { cover: null }, true); bk.cover = null; renderCovers(); toast("Cover entfernt"); }
+      catch (e) { console.error(e); toast(accMsg(e)); }
+    };
+    host.appendChild(row);
+  });
+}
+$("file-cover").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  const bk = B.buecher.get(coverFor); if (!f || !bk) return;
+  if (!navigator.onLine) return toast("Zum Speichern des Covers wird Internet gebraucht");
+  try {
+    const data = await shrinkImage(f);
+    await Store.live("buecher", bk.buch_id, { cover: data }, true);
+    bk.cover = data; renderCovers(); toast("Cover für " + bk.titel + " gespeichert");
+  } catch (err) { console.error(err); toast(err.message === "bild" ? "Das Bild konnte nicht gelesen werden" : accMsg(err)); }
+};
 
 /* ===== Schritt 2: Richtung und Lektion / Unterlektion ===== */
 function selKeys(sel = C.sel){
@@ -851,7 +910,7 @@ async function loadParent(){
     P.zu = new Map(zu.map(z => [z.zuordnung_id, z]));
     P.prog = new Map(B.profile.map((p, i) => [p.profil_id, new Map(progs[i].map(x => [x.vokabel_id, x]))]));
     P.sess = new Map();
-    setWho("parent"); renderParent(); show("s-parent");
+    setWho("parent"); renderParent(); renderCovers(); show("s-parent");
   } catch (e) { showError(e); }
 }
 function renderParent(){

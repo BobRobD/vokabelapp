@@ -199,6 +199,12 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .setrow .nm{display:flex;flex-direction:column;gap:6px;min-width:0}
 .setrow .nm small{color:var(--muted);font-size:13px}
 .link.msg-ok{color:var(--accent)}
+.sect-head{display:flex;align-items:center;gap:12px;width:100%;padding:16px;text-align:left;font-family:var(--f-display);font-size:21px;font-weight:700}
+.sect-head .caret{flex:none;width:1em;color:var(--muted);font-size:16px}
+.sect-head .st{display:flex;flex-direction:column;min-width:0}
+.sect-head small{font-family:var(--f-body);font-size:14px;font-weight:400;color:var(--muted)}
+.sect-head[aria-expanded="true"]{border-color:var(--accent)}
+.sect-body{display:flex;flex-direction:column;gap:14px;margin-top:-6px}
 </style>
 </head>
 <body>
@@ -314,32 +320,48 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
   </section>
 
   <section id="s-parent" hidden>
-    <div><h1>Eltern-Bereich</h1><p class="sub">Kinder und Bücher verwalten, Lernstand und Übungen ansehen. Lektionen und Lernziele legen die Kinder in ihren Einstellungen selbst fest. Tippe auf eine Lektion für Details.</p></div>
-    <div class="legend"><span><i style="background:var(--s0)"></i>neu</span><span><i style="background:var(--s2)"></i>in Arbeit</span><span><i style="background:var(--s3)"></i>gelernt</span></div>
-    <div id="kid-list" style="display:flex;flex-direction:column;gap:14px"></div>
-    <div class="panel addkid">
-      <h2 style="margin:0">Kind hinzufügen</h2>
-      <form id="form-kid"><input id="kid-name" type="text" maxlength="30" placeholder="Vorname" autocomplete="off" aria-label="Vorname des Kindes"><input id="kid-pin" type="password" inputmode="numeric" maxlength="4" placeholder="Start-PIN (4 Ziffern)" autocomplete="new-password" aria-label="Start-PIN"><button class="btn primary" type="submit">Anlegen</button></form>
-      <p class="sub" style="font-size:14px">Legt Profil und Konto an. Danach den Link des Kindes auf seinem Handy öffnen und einmal die PIN eingeben. Die PIN kann das Kind selbst ändern.</p>
-      <div id="inactive-list"></div>
+    <div><h1>Eltern-Bereich</h1><p class="sub">Tippe auf einen Bereich, um ihn auf- oder zuzuklappen.</p></div>
+
+    <button class="panel sect-head" data-sect="personen" aria-expanded="false"><span class="caret">▸</span><span class="st">Personen<small id="sum-personen"></small></span></button>
+    <div class="sect-body" id="sect-personen" hidden>
+      <p class="sub" style="font-size:14px">Konten, zugewiesene Bücher, Lernstand und Übungen. Lektionen und Lernziele legen die Kinder in ihren Einstellungen selbst fest.</p>
+      <div class="legend"><span><i style="background:var(--s0)"></i>neu</span><span><i style="background:var(--s2)"></i>in Arbeit</span><span><i style="background:var(--s3)"></i>gelernt</span></div>
+      <div id="kid-list" style="display:flex;flex-direction:column;gap:14px"></div>
+      <div class="panel addkid">
+        <h2 style="margin:0">Kind hinzufügen</h2>
+        <form id="form-kid"><input id="kid-name" type="text" maxlength="30" placeholder="Vorname" autocomplete="off" aria-label="Vorname des Kindes"><input id="kid-pin" type="password" inputmode="numeric" maxlength="4" placeholder="Start-PIN (4 Ziffern)" autocomplete="new-password" aria-label="Start-PIN"><button class="btn primary" type="submit">Anlegen</button></form>
+        <p class="sub" style="font-size:14px">Legt Profil und Konto an. Danach den Link des Kindes auf seinem Handy öffnen und einmal die PIN eingeben. Die PIN kann das Kind selbst ändern.</p>
+        <div id="inactive-list"></div>
+      </div>
+      <div class="panel addkid">
+        <h2 style="margin:0">Eltern</h2>
+        <div class="acct"><div class="label">Link für das Eltern-Handy</div><div class="url" id="parent-link"></div><div class="inl"><button class="mini" id="btn-parent-link">Link kopieren</button></div></div>
+      </div>
     </div>
-    <div class="panel addkid">
-      <h2 style="margin:0">Buchcover</h2>
-      <p class="sub" style="font-size:14px">Foto vom Cover machen oder ein Bild wählen. Die App verkleinert es automatisch. Es erscheint auf der Startseite der Kinder.</p>
-      <div id="cover-list"></div>
-      <input type="file" id="file-cover" accept="image/*" hidden>
+
+    <button class="panel sect-head" data-sect="buecher" aria-expanded="false"><span class="caret">▸</span><span class="st">Bücher<small id="sum-buecher"></small></span></button>
+    <div class="sect-body" id="sect-buecher" hidden>
+      <div class="panel addkid">
+        <h2 style="margin:0">Buchcover</h2>
+        <p class="sub" style="font-size:14px">Foto vom Cover machen oder ein Bild wählen. Die App verkleinert es automatisch. Es erscheint auf der Startseite der Kinder. Zugewiesen werden Bücher unter „Personen“ beim jeweiligen Kind.</p>
+        <div id="cover-list"></div>
+        <input type="file" id="file-cover" accept="image/*" hidden>
+      </div>
     </div>
-    <div class="panel addkid">
-      <h2 style="margin:0">Daten</h2>
-      <p class="sub" style="font-size:14px">Neue Bücher und Vokabeln kommen als JSON-Datei hinein. Die JSON-Sicherung enthält alle Daten (keine PINs oder Passwörter).</p>
-      <button class="btn ghost" id="btn-import">JSON importieren</button>
-      <input type="file" id="file-import" accept=".json,application/json" hidden>
-      <div id="import-preview"></div>
-      <button class="btn ghost" id="btn-export-json">Alles als JSON sichern</button>
-      <button class="btn ghost" id="btn-export">Lernstand als CSV (zum Ansehen)</button>
-      <div class="acct"><div class="label">Link für das Eltern-Handy</div><div class="url" id="parent-link"></div><div class="inl"><button class="mini" id="btn-parent-link">Link kopieren</button></div></div>
-      <button class="btn ghost" id="btn-signout">Von diesem Gerät abmelden</button>
+
+    <button class="panel sect-head" data-sect="daten" aria-expanded="false"><span class="caret">▸</span><span class="st">Daten Im- und Export<small>Vokabeln importieren, Sicherung, Lernstand als Tabelle</small></span></button>
+    <div class="sect-body" id="sect-daten" hidden>
+      <div class="panel addkid">
+        <p class="sub" style="font-size:14px">Neue Bücher und Vokabeln kommen als JSON-Datei hinein. Die JSON-Sicherung enthält alle Daten (keine PINs oder Passwörter).</p>
+        <button class="btn ghost" id="btn-import">JSON importieren</button>
+        <input type="file" id="file-import" accept=".json,application/json" hidden>
+        <div id="import-preview"></div>
+        <button class="btn ghost" id="btn-export-json">Alles als JSON sichern</button>
+        <button class="btn ghost" id="btn-export">Lernstand als CSV (zum Ansehen)</button>
+      </div>
     </div>
+
+    <button class="btn ghost" id="btn-signout" style="margin-top:8px">Von diesem Gerät abmelden</button>
   </section>
 </main>
 <div class="toast" id="toast" hidden></div>
@@ -713,6 +735,18 @@ function shrinkImage(file, maxW = 300, maxH = 420){
     img.src = url;
   });
 }
+/* Aufklappbare Bereiche im Eltern-Bereich; Zustand bleibt auf dem Gerät gespeichert */
+document.querySelectorAll("[data-sect]").forEach(btn => {
+  const k = btn.dataset.sect, body = $("sect-" + k);
+  const set = o => { body.hidden = !o; btn.setAttribute("aria-expanded", o); btn.querySelector(".caret").textContent = o ? "▾" : "▸"; };
+  set(pref.get("sect-" + k, k === "personen" ? "1" : "0") === "1");
+  btn.onclick = () => { const o = body.hidden; pref.set("sect-" + k, o ? "1" : "0"); set(o); };
+});
+function parentSums(){
+  const n = B.profile.length, nb = B.buecher.size;
+  $("sum-personen").textContent = plural(n, "Kind", "Kinder") + " · Konten, Bücher zuweisen, Lernstand";
+  $("sum-buecher").textContent = plural(nb, "Buch", "Bücher") + " · Cover";
+}
 let coverFor = null;
 function renderCovers(){
   const host = $("cover-list"); host.innerHTML = "";
@@ -956,7 +990,7 @@ function renderParent(){
     fold("k:" + p.profil_id, kidHead.querySelector("[data-fold]"), kb, kidHead);
     host.appendChild(boxMain);
   });
-  renderInactive();
+  renderInactive(); parentSums();
 }
 /* Aufklappen im Eltern-Bereich; Zustand bleibt beim Neuzeichnen erhalten */
 const OPEN = new Set();

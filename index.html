@@ -349,7 +349,7 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
     <button class="panel sect-head" data-sect="daten" aria-expanded="false"><span class="caret">▸</span><span class="st">Daten Im- und Export<small>Vokabeln importieren, Sicherung, Lernstand als Tabelle</small></span></button>
     <div class="sect-body" id="sect-daten" hidden>
       <div class="panel addkid">
-        <p class="sub" style="font-size:14px">Neue Bücher und Vokabeln kommen als JSON-Datei hinein. Die JSON-Sicherung enthält alle Daten (keine PINs oder Passwörter).</p>
+        <p class="sub" style="font-size:14px">Neue Bücher und Vokabeln kommen als JSON-Datei hinein. Die JSON-Sicherung enthält alle Daten der App, auch welches Kind sich mit welchem Benutzernamen anmeldet. Die Konten selbst (Passwörter, PINs) liegen getrennt in Firebase und bleiben dort.</p>
         <button class="btn ghost" id="btn-import">JSON importieren</button>
         <input type="file" id="file-import" accept=".json,application/json" hidden>
         <div id="import-preview"></div>
@@ -1265,7 +1265,7 @@ $("btn-export").onclick = exportCsv;
 
 /* ===== JSON: Sicherung und Import ===== */
 const COLS = { sprachen: "sprache_id", buecher: "buch_id", lektionen: "lektion_id", unterlektionen: "unterlektion_id", vokabeln: "vokabel_id",
-  profile: "profil_id", einstellungen: "einstellung_id", zuordnungen: "zuordnung_id", buch_zuordnungen: "buch_zuordnung_id", fortschritt: "fortschritt_id", uebungen: "uebung_id" };
+  profile: "profil_id", einstellungen: "einstellung_id", zuordnungen: "zuordnung_id", buch_zuordnungen: "buch_zuordnung_id", fortschritt: "fortschritt_id", uebungen: "uebung_id", benutzer: "uid", logins: "login" };
 const STAMM = ["sprachen", "buecher", "lektionen", "unterlektionen", "vokabeln"];
 $("btn-export-json").onclick = async () => {
   const btn = $("btn-export-json"); btn.disabled = true;

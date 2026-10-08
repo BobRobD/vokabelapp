@@ -277,6 +277,7 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
         <button class="opt" id="dir-fs" aria-pressed="false"><span class="lname">Fremdsprache</span> → Deutsch<small>Fremdwort sehen, übersetzen</small></button>
       </div></div>
     <div><div class="label">Lektion</div><div class="lessons" id="lesson-list" style="margin-top:8px"></div></div>
+    <div class="panel" id="goal-row" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px"><div><div class="label">Lernziel</div><div class="sub" style="font-size:14px">Wie oft jede Vokabel gewusst werden muss</div></div><select class="mini" id="goal-sel" aria-label="Lernziel für die Auswahl"></select></div>
     <button class="btn primary" id="btn-start">Los geht's</button>
     <button class="btn ghost" id="btn-review" hidden>Gelernte wiederholen</button>
   </section>
@@ -637,9 +638,13 @@ function goSettings(){
 function renderSetBook(bk){
   const units = sortUnits([...B.units.values()].filter(u => u.buch_id === bk.buch_id).map(u => u.key)).map(k => B.units.get(k));
   const box = document.createElement("div"); box.className = "panel kid";
-  box.innerHTML = `<div class="book-head"><button class="fold" data-fold><span class="caret">▸</span><h2>${esc(bk.titel)} <span class="sub" style="font-weight:400;font-size:15px">· ${esc(B.sprachen.get(bk.sprache_id)?.name || "")}</span></h2></button>${units.length ? `<span style="display:flex;gap:6px;flex:none"><button class="mini" data-all="1">Alle an</button><button class="mini" data-all="0">Alle aus</button></span>` : ""}</div>`;
+  box.innerHTML = `<div class="book-head"><button class="fold" data-fold><span class="caret">▸</span><h2>${esc(bk.titel)} <span class="sub" style="font-weight:400;font-size:15px">· ${esc(B.sprachen.get(bk.sprache_id)?.name || "")}</span></h2></button>${units.length ? `<span style="display:flex;gap:6px;flex:none;flex-wrap:wrap"><button class="mini" data-all="1">Alle an</button><button class="mini" data-all="0">Alle aus</button><select class="mini" data-zall aria-label="Lernziel für alle Lektionen von ${esc(bk.titel)}"><option value="" selected>Ziel für alle</option>${[1,2,3,4,5].map(n => `<option value="${n}">${n}×</option>`).join("")}</select></span>` : ""}</div>`;
   const body = document.createElement("div"); body.className = "book-body"; box.appendChild(body);
   if (!units.length) body.insertAdjacentHTML("beforeend", `<div class="sub">In diesem Buch gibt es noch keine Lektionen.</div>`);
+  const zall = box.querySelector("[data-zall]");
+  if (zall) zall.onchange = e => { const val = +e.target.value; if (!val) return;
+    units.forEach(u => saveUnit(u, { ziel_stufe: val }).catch(() => toast("Ziel nicht gespeichert. Internet prüfen.")));
+    toast("Ziel für alle Lektionen: " + val + "×"); goSettings(); };
   lessonsOfBook(bk.buch_id).forEach(l => {
     const subs = subsOf(l.lektion_id);
     if (!subs.length) return body.appendChild(setUnitRow(B.units.get(l.lektion_id), false));
@@ -858,13 +863,22 @@ function goSetup(){
     b.onclick = () => { C.sel = r.id; goSetup(); };
     list.appendChild(b);
   });
-  const doneSel = countC(selKeys()).n[2];
+  const sk = selKeys(), zs = [...new Set(sk.map(k => C.zu.get(k)?.ziel_stufe || null))];
+  $("goal-row").hidden = !sk.length;
+  $("goal-sel").innerHTML = (zs.length === 1 && zs[0] ? "" : `<option value="" selected>${zs.length > 1 ? "gemischt" : "offen"}</option>`) + [1,2,3,4,5].map(n => `<option value="${n}" ${zs.length === 1 && zs[0] === n ? "selected" : ""}>${n}× gewusst</option>`).join("");
+  const doneSel = countC(sk).n[2];
   $("btn-start").disabled = openSel === 0;
   $("btn-start").textContent = openSel ? `Los geht's (${plural(openSel, "Karte", "Karten")})` : "Alles gelernt";
   $("btn-review").hidden = !doneSel;
   $("btn-review").textContent = `Gelernte wiederholen (${plural(doneSel, "Karte", "Karten")})`;
   show("s-setup");
 }
+$("goal-sel").onchange = async e => {
+  const val = +e.target.value; if (!val) return;
+  try { await Promise.all(selKeys().map(k => saveUnit(B.units.get(k), { ziel_stufe: val }))); toast("Lernziel: " + val + "×"); }
+  catch { toast("Ziel nicht gespeichert. Internet prüfen."); }
+  goSetup();
+};
 $("dir-de").onclick = () => { C.dir = "de-fs"; pref.set("dir", C.dir); goSetup(); };
 $("dir-fs").onclick = () => { C.dir = "fs-de"; pref.set("dir", C.dir); goSetup(); };
 

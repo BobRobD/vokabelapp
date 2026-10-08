@@ -278,6 +278,7 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
       </div></div>
     <div><div class="label">Lektion</div><div class="lessons" id="lesson-list" style="margin-top:8px"></div></div>
     <button class="btn primary" id="btn-start">Los geht's</button>
+    <button class="btn ghost" id="btn-review" hidden>Gelernte wiederholen</button>
   </section>
 
   <section id="s-goal" hidden>
@@ -857,16 +858,22 @@ function goSetup(){
     b.onclick = () => { C.sel = r.id; goSetup(); };
     list.appendChild(b);
   });
+  const doneSel = countC(selKeys()).n[2];
   $("btn-start").disabled = openSel === 0;
   $("btn-start").textContent = openSel ? `Los geht's (${plural(openSel, "Karte", "Karten")})` : "Alles gelernt";
+  $("btn-review").hidden = !doneSel;
+  $("btn-review").textContent = `Gelernte wiederholen (${plural(doneSel, "Karte", "Karten")})`;
   show("s-setup");
 }
 $("dir-de").onclick = () => { C.dir = "de-fs"; pref.set("dir", C.dir); goSetup(); };
 $("dir-fs").onclick = () => { C.dir = "fs-de"; pref.set("dir", C.dir); goSetup(); };
 
 /* ===== Lernziel beim ersten Start ===== */
-$("btn-start").onclick = () => { const unset = selKeys().filter(k => !C.zu.get(k)?.ziel_stufe); unset.length ? goGoal(unset) : startRound(); };
-const G = { keys: [], val: DEFAULT_ZIEL };
+/* review = true: nur bereits gelernte Vokabeln abfragen; "Nicht gewusst" senkt die Stufe, das Wort ist danach wieder offen */
+function begin(review){ const unset = selKeys().filter(k => !C.zu.get(k)?.ziel_stufe); G.review = review; unset.length ? goGoal(unset) : startRound(review); }
+$("btn-start").onclick = () => begin(false);
+$("btn-review").onclick = () => begin(true);
+const G = { keys: [], val: DEFAULT_ZIEL, review: false };
 function goGoal(keys){ G.keys = keys; G.val = DEFAULT_ZIEL; $("goal-lessons").textContent = keys.map(k => B.units.get(k).full).join(", "); renderGoalOpts(); show("s-goal"); }
 function renderGoalOpts(){
   $("goal-opts").innerHTML = [1,2,3,4,5].map(n => `<button class="opt" data-z="${n}" aria-pressed="${n === G.val}">${n}×<small>${n === 3 ? "empfohlen" : n === 1 ? "Wdh." : n === 2 ? "schnell" : n === 5 ? "gründlich" : "&nbsp;"}</small></button>`).join("");
@@ -876,16 +883,16 @@ $("btn-goal").onclick = async () => {
   const btn = $("btn-goal"); btn.disabled = true;
   try {
     for (const k of G.keys) await saveUnit(B.units.get(k), { ziel_stufe: G.val });
-    startRound();
+    startRound(G.review);
   } catch { toast("Ziel nicht gespeichert. Internet prüfen."); }
   finally { btn.disabled = false; }
 };
 
 /* ===== Abfrage ===== */
-const R = { queue: [], i: 0, hist: [], st: { g: 0, f: 0, n: 0, neu: 0 }, per: new Map(), runde: null, beginn: null, saved: new Set(), active: false, keys: [] };
-function startRound(){
-  R.keys = selKeys();
-  R.queue = shuffle(vocabOf(R.keys).filter(v => !isDone(v)));
+const R = { queue: [], i: 0, hist: [], st: { g: 0, f: 0, n: 0, neu: 0 }, per: new Map(), runde: null, beginn: null, saved: new Set(), active: false, keys: [], review: false };
+function startRound(review = false){
+  R.keys = selKeys(); R.review = review;
+  R.queue = shuffle(vocabOf(R.keys).filter(v => review ? isDone(v) : !isDone(v)));
   if (!R.queue.length) return goSetup();
   R.i = 0; R.hist = []; R.st = { g: 0, f: 0, n: 0, neu: 0 }; R.per = new Map(); R.saved = new Set();
   R.runde = C.pid + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -961,14 +968,16 @@ function roundDone(){
   finishRound();
   const open = vocabOf(R.keys).filter(v => !isDone(v)).length;
   $("st-g").textContent = R.st.g; $("st-f").textContent = R.st.f; $("st-n").textContent = R.st.n;
-  $("done-title").textContent = open ? "Runde geschafft" : "Alles gelernt!";
-  $("done-sub").textContent = (R.st.neu ? plural(R.st.neu, "Vokabel", "Vokabeln") + " neu gelernt. " : "") + (open ? open + " noch offen." : "In dieser Auswahl ist jede Vokabel gelernt.");
+  $("done-title").textContent = R.review ? "Wiederholung geschafft" : open ? "Runde geschafft" : "Alles gelernt!";
+  $("done-sub").textContent = R.review
+    ? (R.st.n ? plural(R.st.n, "Vokabel muss", "Vokabeln müssen") + " wieder geübt werden." : "Alles sitzt noch.") + (open ? " " + open + " offen." : "")
+    : (R.st.neu ? plural(R.st.neu, "Vokabel", "Vokabeln") + " neu gelernt. " : "") + (open ? open + " noch offen." : "In dieser Auswahl ist jede Vokabel gelernt.");
   $("btn-again").hidden = !open;
   $("btn-again").textContent = `Nochmal (${plural(open, "Karte", "Karten")})`;
   $("btn-fix").hidden = !R.hist.length;
   show("s-done");
 }
-$("btn-again").onclick = startRound;
+$("btn-again").onclick = () => startRound(false);
 $("btn-other").onclick = goSetup;
 $("btn-stop").onclick = () => R.hist.length ? roundDone() : (R.active = false, goSetup());
 

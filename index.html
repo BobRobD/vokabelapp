@@ -96,6 +96,7 @@ h2{font-family:var(--f-display);font-size:19px;margin:6px 0 0}
 .stage{display:flex;gap:5px} .stage i{width:10px;height:10px;border-radius:50%;background:var(--line)} .stage i.on{background:var(--good)}
 .word{font-family:var(--f-display);font-size:34px;line-height:1.15;font-weight:700;overflow-wrap:anywhere;text-wrap:balance}
 .word.ans{font-size:28px;color:var(--accent)}
+.word.long{font-size:21px;line-height:1.3;text-wrap:pretty}
 .say{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
 .speak{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
 .speak svg{width:20px;height:20px;fill:none;stroke:var(--fg);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -271,7 +272,7 @@ table.vt td.num{white-space:nowrap;font-variant-numeric:tabular-nums}
   <section id="s-setup" hidden>
     <button class="back" id="btn-books">← Alle Bücher</button>
     <div><h1 id="setup-title">Buch</h1><p class="sub" id="setup-sub"></p></div>
-    <div><div class="label">Abfragerichtung</div>
+    <div id="dir-row"><div class="label">Abfragerichtung</div>
       <div class="seg" style="margin-top:8px">
         <button class="opt" id="dir-de" aria-pressed="true">Deutsch → <span class="lname">Fremdsprache</span><small>Deutsch sehen, übersetzen</small></button>
         <button class="opt" id="dir-fs" aria-pressed="false"><span class="lname">Fremdsprache</span> → Deutsch<small>Fremdwort sehen, übersetzen</small></button>
@@ -461,7 +462,11 @@ function countFor(vocab, prog, zielOf){
   vocab.forEach(v => { const s = prog?.get(v.vokabel_id)?.stufe ?? 0; c.n[s >= zielOf(v.lektion_id) ? 2 : s > 0 ? 1 : 0]++; });
   return c;
 }
-function canSpeak(lang){ return !!lang && lang.sprache_id !== "la"; }
+/* Fach-Bücher (z. B. Physik): Sprache mit typ "fach" → Karten "Frage → Antwort", kein Vorlesen, feste Richtung */
+const isFach = lang => lang?.typ === "fach";
+const sides = lang => isFach(lang) ? { de: "Frage", fs: "Antwort" } : { de: "Deutsch", fs: lang?.name || "Fremdsprache" };
+const langOfBook = bid => B.sprachen.get(B.buecher.get(bid)?.sprache_id) || null;
+function canSpeak(lang){ return !!lang && lang.sprache_id !== "la" && !isFach(lang); }
 let VOICES = [];
 function loadVoices(){ try { VOICES = speechSynthesis.getVoices() || []; } catch { VOICES = []; } }
 try { loadVoices(); speechSynthesis.addEventListener("voiceschanged", loadVoices); } catch {}
@@ -760,10 +765,11 @@ function renderCovers(){
   books.forEach(bk => host.appendChild(renderBookView(bk)));
 }
 const vocabOfUnit = key => P.vocab.filter(v => unitKeyOfVocab(v) === key).sort((a, b) => a.vokabel_id.localeCompare(b.vokabel_id, "de", { numeric: true }));
-function vocabTable(list, lang){
+function vocabTable(list, lang, lo){
+  const sd = sides(lo);
   if (!list.length) return `<span class="sub">Noch keine Vokabeln.</span>`;
-  return `<div class="tscroll"><table class="vt"><thead><tr><th>${esc(lang)}</th><th>Deutsch</th><th>Hinweis</th><th>Seite</th></tr></thead><tbody>${
-    list.map(v => `<tr><td>${esc(v.fremdsprache)}</td><td>${esc(v.deutsch)}</td><td>${esc(v.hinweis || "")}</td><td class="num">${esc(v.buchseite ?? "")}</td></tr>`).join("")
+  return `<div class="tscroll"><table class="vt"><thead><tr>${isFach(lo) ? `<th>${sd.de}</th><th>${sd.fs}</th>` : `<th>${esc(lang)}</th><th>Deutsch</th>`}<th>Hinweis</th><th>Seite</th></tr></thead><tbody>${
+    list.map(v => `<tr>${isFach(lo) ? `<td>${esc(v.deutsch)}</td><td>${esc(v.fremdsprache)}</td>` : `<td>${esc(v.fremdsprache)}</td><td>${esc(v.deutsch)}</td>`}<td>${esc(v.hinweis || "")}</td><td class="num">${esc(v.buchseite ?? "")}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
 /* Aufklapper, der den Inhalt erst beim ersten Öffnen zeichnet (große Bücher bleiben schnell) */
@@ -797,14 +803,14 @@ function renderBookView(bk){
       const gb = document.createElement("div"); gb.className = "lesson-body"; gb.style.marginLeft = "20px";
       body.appendChild(gh); body.appendChild(gb);
       lazyFold("bv:" + l.lektion_id, gh, gb, () => {
-        if (!subs.length) return gb.insertAdjacentHTML("beforeend", vocabTable(vocabOfUnit(l.lektion_id), lang));
+        if (!subs.length) return gb.insertAdjacentHTML("beforeend", vocabTable(vocabOfUnit(l.lektion_id), lang, langOfBook(bk.buch_id)));
         subs.forEach(u => {
           const list = vocabOfUnit(u.unterlektion_id);
           const sh = document.createElement("button"); sh.className = "fold";
           sh.innerHTML = `<span class="caret">▸</span><span>${esc(u.name)} <span class="sub" style="font-size:13px">· ${plural(list.length, "Vokabel", "Vokabeln")}</span></span>`;
           const sb = document.createElement("div"); sb.className = "lesson-body"; sb.style.marginLeft = "20px";
           gb.appendChild(sh); gb.appendChild(sb);
-          lazyFold("bv:" + u.unterlektion_id, sh, sb, () => sb.insertAdjacentHTML("beforeend", vocabTable(list, lang)));
+          lazyFold("bv:" + u.unterlektion_id, sh, sb, () => sb.insertAdjacentHTML("beforeend", vocabTable(list, lang, langOfBook(bk.buch_id))));
         });
       });
     });
@@ -837,6 +843,7 @@ function goSetup(){
   $("setup-title").textContent = bk.titel;
   $("setup-sub").textContent = C.lang.name;
   document.querySelectorAll(".lname").forEach(s => s.textContent = C.lang.name);
+  $("dir-row").hidden = isFach(C.lang);
   $("dir-de").setAttribute("aria-pressed", C.dir === "de-fs");
   $("dir-fs").setAttribute("aria-pressed", C.dir === "fs-de");
   const all = bookUnits(C.book);
@@ -913,15 +920,18 @@ function startRound(review = false){
   R.beginn = now(); R.active = true;
   renderCard(); show("s-card");
 }
+const curDir = () => isFach(C.lang) ? "de-fs" : C.dir;
 function renderCard(revealed = false){
-  const v = R.queue[R.i], deFirst = C.dir === "de-fs";
+  const v = R.queue[R.i], deFirst = curDir() === "de-fs", sd = sides(C.lang);
   $("prog-text").textContent = (R.i + 1) + " / " + R.queue.length;
   $("prog-fill").style.width = (R.i / R.queue.length * 100) + "%";
   $("btn-undo").hidden = !R.hist.length;
-  $("q-label").textContent = deFirst ? "Deutsch" : C.lang.name;
-  $("a-label").textContent = deFirst ? C.lang.name : "Deutsch";
+  $("q-label").textContent = deFirst ? sd.de : sd.fs;
+  $("a-label").textContent = deFirst ? sd.fs : sd.de;
   $("q-word").textContent = deFirst ? v.deutsch : v.fremdsprache;
   $("a-word").textContent = deFirst ? v.fremdsprache : v.deutsch;
+  $("q-word").classList.toggle("long", $("q-word").textContent.length > 45);
+  $("a-word").classList.toggle("long", $("a-word").textContent.length > 45);
   $("a-hint").textContent = v.hinweis || ""; $("a-hint").hidden = !v.hinweis;
   const s = stufe(v.vokabel_id), z = zielOfVocab(v);
   $("q-stage").innerHTML = Array.from({ length: z }, (_, i) => `<i class="${i < s ? "on" : ""}"></i>`).join("");
@@ -971,7 +981,7 @@ async function finishRound(){
     const id = R.runde + "_" + key, u = B.units.get(key);
     try {
       if (pu.n > 0){
-        await Store.saveSession({ uebung_id: id, runde_id: R.runde, profil_id: C.pid, lektion_id: u.lektion_id, unterlektion_id: u.unterlektion_id, richtung: C.dir,
+        await Store.saveSession({ uebung_id: id, runde_id: R.runde, profil_id: C.pid, lektion_id: u.lektion_id, unterlektion_id: u.unterlektion_id, richtung: curDir(),
           beginn: R.beginn, ende, dauer_sekunden: dauer, anzahl_vokabeln: pu.n, anzahl_gewusst: pu.g, anzahl_fast: pu.f, anzahl_nicht: pu.x });
         R.saved.add(id);
       } else if (R.saved.has(id)){ await Store.deleteSession(id); R.saved.delete(id); }
@@ -1105,13 +1115,15 @@ function renderUnitRow(p, unit, indent){
   if (isOpen) renderDetail(body, p, unit, voc, prog, z);
   return wrap;
 }
-const vocabForm = (lang, v) => `<form class="vform" data-vform><div class="label">${v ? "Vokabel ändern" : "Vokabel hinzufügen"}</div>
-  <input name="fs" type="text" placeholder="${esc(lang)}" value="${esc(v?.fremdsprache)}" autocomplete="off" aria-label="${esc(lang)}">
-  <input name="de" type="text" placeholder="Deutsch" value="${esc(v?.deutsch)}" autocomplete="off" aria-label="Deutsch">
-  <input name="hint" type="text" placeholder="Hinweis (optional)" value="${esc(v?.hinweis)}" autocomplete="off" aria-label="Hinweis">
+const vocabForm = (lang, v, lo) => { const sd = sides(lo); return `<form class="vform" data-vform><div class="label">${v ? "Vokabel ändern" : "Vokabel hinzufügen"}</div>
+${isFach(lo) ? `  <input name="de" type="text" placeholder="${esc(sd.de)}" value="${esc(v?.deutsch)}" autocomplete="off" aria-label="${esc(sd.de)}">
+  <input name="fs" type="text" placeholder="${esc(sd.fs)}" value="${esc(v?.fremdsprache)}" autocomplete="off" aria-label="${esc(sd.fs)}">
+` : `  <input name="fs" type="text" placeholder="${esc(sd.fs)}" value="${esc(v?.fremdsprache)}" autocomplete="off" aria-label="${esc(sd.fs)}">
+  <input name="de" type="text" placeholder="${esc(sd.de)}" value="${esc(v?.deutsch)}" autocomplete="off" aria-label="${esc(sd.de)}">
+`}  <input name="hint" type="text" placeholder="Hinweis (optional)" value="${esc(v?.hinweis)}" autocomplete="off" aria-label="Hinweis">
   <input name="page" type="text" inputmode="numeric" placeholder="Buchseite (optional)" value="${esc(v?.buchseite)}" autocomplete="off" aria-label="Buchseite">
   <div class="row"><button class="btn primary" type="submit">Speichern</button><button class="btn ghost" type="button" data-cancel>Abbrechen</button></div>
-  ${v ? `<button class="mini" type="button" data-del>Vokabel löschen</button>` : ""}</form>`;
+  ${v ? `<button class="mini" type="button" data-del>Vokabel löschen</button>` : ""}</form>`; };
 async function saveVocab(form, unit, cur){
   const g = n => form.elements[n].value.trim();
   const fs = g("fs"), de = g("de"), hint = g("hint"), pg = parseInt(g("page"), 10);
@@ -1145,15 +1157,15 @@ function renderDetail(el, p, unit, voc, prog, z){
   const rows = voc.map(v => ({ v, f: prog?.get(v.vokabel_id) })).map(r => ({ ...r, s: r.f?.stufe ?? 0 }));
   if (mode === "schwer") rows.sort((a, b) => (a.s >= z) - (b.s >= z) || a.s - b.s || (b.f?.anzahl_nicht || 0) - (a.f?.anzahl_nicht || 0) || (b.f?.anzahl_abfragen || 0) - (a.f?.anzahl_abfragen || 0));
   else rows.sort((a, b) => a.v.vokabel_id.localeCompare(b.v.vokabel_id));
-  const lang = B.sprachen.get(B.buecher.get(unit.buch_id)?.sprache_id)?.name || "Fremdsprache";
+  const lo = langOfBook(unit.buch_id), lang = lo?.name || "Fremdsprache", sd = sides(lo), fach = isFach(lo);
   const pill = s => `<span class="pill ${s >= z ? "p2" : s > 0 ? "p1" : "p0"}">${s >= z ? "gelernt" : Math.min(s, z) + "/" + z}</span>`;
   const ed = P.edit && P.edit.zid === zid ? P.edit : null;
   const cur = ed?.vid ? voc.find(v => v.vokabel_id === ed.vid) || null : null;
   el.style.cssText = "display:flex;flex-direction:column;gap:12px";
   el.innerHTML = `<div class="detail-head"><span class="label">Vokabeln (${voc.length})</span><span style="display:flex;gap:6px;flex-wrap:wrap">${voc.length ? `<button class="mini" data-sort>${mode === "schwer" ? "Nach Buch sortieren" : "Schwierigste zuerst"}</button>` : ""}<button class="mini" data-add>+ Vokabel</button></span></div>
-    ${ed ? vocabForm(lang, cur) : ""}
-    ${voc.length ? `<div class="tscroll"><table class="vt"><thead><tr><th>${esc(lang)}</th><th>Deutsch</th><th>Stand</th><th>Versuche</th><th>Zuletzt</th><th></th></tr></thead><tbody>${
-      rows.map(r => `<tr><td>${esc(r.v.fremdsprache)}</td><td>${esc(r.v.deutsch)}</td><td class="num">${pill(r.s)}</td><td class="num">${r.f ? (r.f.anzahl_abfragen || 0) + (r.f.anzahl_nicht ? ` <span class="pill pn" title="nicht gewusst">${r.f.anzahl_nicht}</span>` : "") : "–"}</td><td class="num">${r.f ? fmtDay(r.f.zuletzt_abgefragt) : "–"}</td><td><button class="mini" data-edit="${esc(r.v.vokabel_id)}">Ändern</button></td></tr>`).join("")
+    ${ed ? vocabForm(lang, cur, lo) : ""}
+    ${voc.length ? `<div class="tscroll"><table class="vt"><thead><tr>${fach ? `<th>${sd.de}</th><th>${sd.fs}</th>` : `<th>${esc(lang)}</th><th>Deutsch</th>`}<th>Stand</th><th>Versuche</th><th>Zuletzt</th><th></th></tr></thead><tbody>${
+      rows.map(r => `<tr>${fach ? `<td>${esc(r.v.deutsch)}</td><td>${esc(r.v.fremdsprache)}</td>` : `<td>${esc(r.v.fremdsprache)}</td><td>${esc(r.v.deutsch)}</td>`}<td class="num">${pill(r.s)}</td><td class="num">${r.f ? (r.f.anzahl_abfragen || 0) + (r.f.anzahl_nicht ? ` <span class="pill pn" title="nicht gewusst">${r.f.anzahl_nicht}</span>` : "") : "–"}</td><td class="num">${r.f ? fmtDay(r.f.zuletzt_abgefragt) : "–"}</td><td><button class="mini" data-edit="${esc(r.v.vokabel_id)}">Ändern</button></td></tr>`).join("")
     }</tbody></table></div>` : `<span class="sub">Noch keine Vokabeln.</span>`}
     <div class="label">Übungen</div><div class="sessions" data-sess><span class="sub">Übungen werden geladen …</span></div>`;
   const again = () => renderDetail(el, p, unit, voc, prog, z);
@@ -1175,7 +1187,7 @@ function renderDetail(el, p, unit, voc, prog, z){
   const draw = list => {
     if (!list.length){ target.innerHTML = `<span class="sub">Noch keine Übungen.</span>`; return; }
     target.innerHTML = list.slice().sort((a, b) => b.beginn.localeCompare(a.beginn)).map(u =>
-      `<div class="sess"><div><div class="when">${esc(fmtDate(u.beginn))}</div><div class="meta">${fmtDur(u.dauer_sekunden || 0)} · ${plural(u.anzahl_vokabeln, "Vokabel", "Vokabeln")} · ${u.richtung === "fs-de" ? esc(lang) + " → Deutsch" : "Deutsch → " + esc(lang)}</div></div>
+      `<div class="sess"><div><div class="when">${esc(fmtDate(u.beginn))}</div><div class="meta">${fmtDur(u.dauer_sekunden || 0)} · ${plural(u.anzahl_vokabeln, "Vokabel", "Vokabeln")} · ${fach ? "Frage → Antwort" : u.richtung === "fs-de" ? esc(lang) + " → Deutsch" : "Deutsch → " + esc(lang)}</div></div>
        <div class="res"><span class="pill pg" title="gewusst">${u.anzahl_gewusst}</span><span class="pill pf" title="fast gewusst">${u.anzahl_fast}</span><span class="pill pn" title="nicht gewusst">${u.anzahl_nicht}</span></div></div>`).join("");
   };
   if (P.sess.has(zid)) return draw(P.sess.get(zid));
